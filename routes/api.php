@@ -32,12 +32,14 @@ Route::post('/register', function (Request $request) {
         'name' => 'required|string|max:255',
         'email' => 'required|email|unique:users',
         'password' => 'required|string|min:8|confirmed',
+        'role' => 'sometimes|in:ADMIN,ENGINEERING,MAINTENANCE,CONSUMER'
     ]);
 
     $user = User::create([
         'name' => $request->name,
         'email' => $request->email,
         'password' => Hash::make($request->password),
+        'role' => $request->role ?? 'CONSUMER', // Default to CONSUMER if not specified
     ]);
 
     $token = $user->createToken('api-token')->plainTextToken;
@@ -119,8 +121,54 @@ Route::prefix('v1')->group(function () {
             return response()->json([
                 'message' => 'Welcome to the dashboard',
                 'user' => $request->user()->name,
+                'role' => $request->user()->role->value,
                 'timestamp' => now()->toISOString()
             ]);
+        });
+        
+        // Admin-only routes
+        Route::middleware('role:ADMIN')->group(function () {
+            Route::get('/admin/users', function () {
+                return response()->json([
+                    'message' => 'Admin users list',
+                    'users' => User::select('id', 'name', 'email', 'role', 'created_at')->paginate(10)
+                ]);
+            });
+            
+            Route::post('/admin/users/{user}/role', function (Request $request, User $user) {
+                $request->validate([
+                    'role' => 'required|in:ADMIN,ENGINEERING,MAINTENANCE,CONSUMER'
+                ]);
+                
+                $user->update(['role' => $request->role]);
+                
+                return response()->json([
+                    'message' => 'User role updated successfully',
+                    'user' => $user->fresh(['id', 'name', 'email', 'role'])
+                ]);
+            });
+        });
+        
+        // Engineering & Maintenance routes
+        Route::middleware('role:ENGINEERING,MAINTENANCE')->group(function () {
+            Route::get('/maintenance/reports', function (Request $request) {
+                return response()->json([
+                    'message' => 'Maintenance reports access',
+                    'user_role' => $request->user()->role->value,
+                    'reports' => ['report1', 'report2', 'report3']
+                ]);
+            });
+        });
+        
+        // Maintenance-only routes
+        Route::middleware('role:MAINTENANCE')->group(function () {
+            Route::post('/maintenance/work-orders', function (Request $request) {
+                return response()->json([
+                    'message' => 'Work order created',
+                    'created_by' => $request->user()->name,
+                    'role' => $request->user()->role->value
+                ]);
+            });
         });
     });
 });

@@ -1,16 +1,30 @@
-# Laravel API Project
+# Laravel + React Water Maintenance System
 
-This is a clean Laravel 12 project configured for API-only development with **Laravel Sanctum** authentication.
+This is a full-stack Laravel 12 project with **React frontend** and role-based authentication using **Laravel Sanctum**.
 
 ## Features
 
+- ✅ **React Frontend** (JavaScript, no TypeScript)  
 - ✅ **Laravel Sanctum API Authentication** (Token-based)
-- ✅ API-only routing (no frontend dependencies)
+- ✅ **Role-based access control** (ADMIN, ENGINEERING, MAINTENANCE, CONSUMER)
 - ✅ Supabase PostgreSQL database support
 - ✅ CORS enabled for API access
 - ✅ Production-ready configuration
-- ✅ Minimal, clean codebase
 - ✅ Complete authentication endpoints
+
+## Setup
+
+**Your Laravel server is already running on:** `http://127.0.0.1:8000`
+
+**To get the React frontend working:**
+
+1. **Install Node.js** from https://nodejs.org/ (LTS version)
+2. **Install frontend dependencies:**
+   ```bash
+   npm install
+   npm run dev
+   ```
+3. **Visit:** http://127.0.0.1:8000
 
 ## Setup
 
