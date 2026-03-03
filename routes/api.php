@@ -170,5 +170,101 @@ Route::prefix('v1')->group(function () {
                 ]);
             });
         });
+
+        // ==============================================
+        // WATER MAINTENANCE WORKFLOW API ROUTES
+        // ==============================================
+
+        // COMPLAINTS MANAGEMENT
+        Route::apiResource('complaints', \App\Http\Controllers\Api\ComplaintController::class);
+        
+        // Complaint workflow actions
+        Route::post('complaints/{complaint}/submit-to-engineering', [\App\Http\Controllers\Api\ComplaintController::class, 'submitToEngineering']);
+        Route::post('complaints/{complaint}/approve', [\App\Http\Controllers\Api\ComplaintController::class, 'approve']);
+        Route::post('complaints/{complaint}/decline', [\App\Http\Controllers\Api\ComplaintController::class, 'decline']);
+
+        // WORK ORDERS MANAGEMENT
+        Route::apiResource('work-orders', \App\Http\Controllers\Api\WorkOrderController::class);
+        
+        // Work order workflow actions
+        Route::post('work-orders/{work_order}/assign', [\App\Http\Controllers\Api\WorkOrderController::class, 'assign']);
+        Route::post('work-orders/{work_order}/start-work', [\App\Http\Controllers\Api\WorkOrderController::class, 'startWork']);
+        Route::post('work-orders/{work_order}/complete-work', [\App\Http\Controllers\Api\WorkOrderController::class, 'completeWork']);
+        
+        // Get maintenance staff for assignment (Admin only)
+        Route::get('maintenance-staff', [\App\Http\Controllers\Api\WorkOrderController::class, 'getMaintenanceStaff']);
+
+        // MAINTENANCE REPORTS MANAGEMENT
+        Route::apiResource('maintenance-reports', \App\Http\Controllers\Api\MaintenanceReportController::class);
+        
+        // Maintenance report helpers
+        Route::get('maintenance-reports-stats', [\App\Http\Controllers\Api\MaintenanceReportController::class, 'getStats']);
+        Route::get('completed-work-orders', [\App\Http\Controllers\Api\MaintenanceReportController::class, 'getCompletedWorkOrders']);
+
+        // DASHBOARD AND OVERVIEW ROUTES
+        Route::get('workflow-dashboard', function (Request $request) {
+            $user = $request->user();
+            
+            $data = [
+                'user' => $user->only(['id', 'name', 'email', 'role']),
+                'timestamp' => now()->toISOString()
+            ];
+
+            // Role-specific dashboard data
+            switch ($user->role->value) {
+                case 'CONSUMER':
+                    $data['my_complaints'] = $user->complaints()
+                        ->with(['workOrder'])
+                        ->orderBy('submitted_at', 'desc')
+                        ->limit(5)
+                        ->get();
+                    $data['complaints_count'] = $user->complaints()->count();
+                    break;
+
+                case 'ADMIN':
+                    $data['pending_complaints'] = \App\Models\Complaint::where('status', 'pending')->count();
+                    $data['pending_assignments'] = \App\Models\WorkOrder::where('status', 'pending_assignment')->count();
+                    $data['active_work_orders'] = \App\Models\WorkOrder::where('status', 'in_progress')->count();
+                    $data['recent_complaints'] = \App\Models\Complaint::with(['user'])
+                        ->orderBy('submitted_at', 'desc')
+                        ->limit(5)
+                        ->get();
+                    break;
+
+                case 'ENGINEERING':
+                    $data['pending_reviews'] = \App\Models\Complaint::where('status', 'submitted_to_engineering')->count();
+                    $data['approved_this_month'] = \App\Models\Complaint::where('status', 'approved')
+                        ->whereMonth('updated_at', now()->month)
+                        ->count();
+                    $data['pending_complaints'] = \App\Models\Complaint::where('status', 'submitted_to_engineering')
+                        ->with(['user'])
+                        ->orderBy('updated_at', 'asc')
+                        ->limit(5)
+                        ->get();
+                    break;
+
+                case 'MAINTENANCE':
+                    $data['my_assigned_work'] = $user->workOrdersAssignedToMe()
+                        ->whereIn('status', ['assigned', 'in_progress'])
+                        ->count();
+                    $data['completed_this_month'] = $user->workOrdersAssignedToMe()
+                        ->where('status', 'completed')
+                        ->whereMonth('actual_completion_date', now()->month)
+                        ->count();
+                    $data['pending_reports'] = \App\Models\WorkOrder::where('assigned_to', $user->id)
+                        ->where('status', 'completed')
+                        ->whereDoesntHave('maintenanceReport')
+                        ->count();
+                    $data['my_work_orders'] = $user->workOrdersAssignedToMe()
+                        ->with(['complaint.user'])
+                        ->whereIn('status', ['assigned', 'in_progress'])
+                        ->orderBy('estimated_completion_date', 'asc')
+                        ->limit(5)
+                        ->get();
+                    break;
+            }
+
+            return response()->json($data);
+        });
     });
 });
