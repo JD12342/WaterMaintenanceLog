@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,33 +18,99 @@ use Illuminate\Support\Facades\Auth;
 
 // Public routes
 Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect('/dashboard');
+    }
+
     return Inertia::render('Home', [
         'auth' => [
-            'user' => Auth::user()
-        ]
+            'user' => null,
+        ],
     ]);
 })->name('home');
 
-// Simple authentication routes for testing
+// Authentication routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', function () {
-        return view('auth.login'); // Use blade view for now
+        return view('auth.login');
     })->name('login');
     
+    Route::post('/login', function (Request $request) {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $request->session()->regenerate();
+            return redirect()->intended('/dashboard');
+        }
+
+        return back()->withErrors([
+            'email' => 'The provided credentials do not match our records.',
+        ])->onlyInput('email');
+    });
+    
     Route::get('/register', function () {
-        return view('auth.register'); // Use blade view for now  
+        return view('auth.register');
     })->name('register');
 });
 
-// Authenticated routes - FIXED: Using 'auth' instead of 'auth:sanctum'
+// Logout route
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');
+
+// Authenticated routes
 Route::middleware(['auth'])->group(function () {
     
-    // Dashboard
+    // Dashboard - Pass role-based data from server
     Route::get('/dashboard', function () {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $role = $user->role;
+        $userId = (int) Auth::id();
+        
+        // Get basic stats based on role
+        $stats = [];
+        if ($role === 'ADMIN') {
+            $stats = [
+                'totalUsers' => \App\Models\User::count(),
+                'totalComplaints' => \App\Models\Complaint::count(),
+                'pendingComplaints' => \App\Models\Complaint::where('status', 'pending')->count(),
+                'activeWorkOrders' => \App\Models\WorkOrder::whereNotIn('status', ['completed', 'closed'])->count(),
+            ];
+        } elseif ($role === 'ENGINEERING') {
+            $stats = [
+                'pendingReview' => \App\Models\Complaint::where('status', 'submitted_to_engineering')->count(),
+                'approvedThisMonth' => \App\Models\Complaint::where('status', 'approved')
+                    ->whereMonth('updated_at', now()->month)->count(),
+            ];
+        } elseif ($role === 'MAINTENANCE') {
+            $stats = [
+                'assignedWork' => \App\Models\WorkOrder::where('assigned_to', $userId)
+                    ->whereNotIn('status', ['completed', 'closed'])->count(),
+                'completedThisMonth' => \App\Models\WorkOrder::where('assigned_to', $userId)
+                    ->where('status', 'completed')
+                    ->whereMonth('updated_at', now()->month)->count(),
+            ];
+        } else {
+            $stats = [
+                'myComplaints' => \App\Models\Complaint::where('user_id', $userId)->count(),
+                'pendingComplaints' => \App\Models\Complaint::where('user_id', $userId)
+                    ->where('status', 'pending')->count(),
+            ];
+        }
+        
         return Inertia::render('Dashboard', [
             'auth' => [
-                'user' => Auth::user()
-            ]
+                'user' => $user
+            ],
+            'stats' => $stats,
+            'role' => $role
         ]);
     })->name('dashboard');
 

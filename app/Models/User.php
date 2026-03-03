@@ -17,6 +17,10 @@ enum UserRole: string
     case CONSUMER = 'CONSUMER';
 }
 
+/**
+ * @property int $id
+ * @property \App\Models\UserRole $role
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */

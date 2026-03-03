@@ -17,6 +17,7 @@ class ComplaintController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $query = Complaint::with(['user', 'workOrder.assignedToUser']);
 
@@ -99,6 +100,7 @@ class ComplaintController extends Controller
         ])->findOrFail($id);
 
         // Check authorization
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         if ($user->isConsumer() && $complaint->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -113,6 +115,7 @@ class ComplaintController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $complaint = Complaint::findOrFail($id);
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         $request->validate([
@@ -156,7 +159,9 @@ class ComplaintController extends Controller
      */
     public function submitToEngineering(Request $request, string $id): JsonResponse
     {
-        if (!Auth::user()->isAdmin()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             return response()->json(['message' => 'Only admins can submit to engineering'], 403);
         }
 
@@ -182,7 +187,9 @@ class ComplaintController extends Controller
      */
     public function approve(Request $request, string $id): JsonResponse
     {
-        if (!Auth::user()->isEngineering()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isEngineering()) {
             return response()->json(['message' => 'Only engineering can approve complaints'], 403);
         }
 
@@ -212,7 +219,9 @@ class ComplaintController extends Controller
      */
     public function decline(Request $request, string $id): JsonResponse
     {
-        if (!Auth::user()->isEngineering()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isEngineering()) {
             return response()->json(['message' => 'Only engineering can decline complaints'], 403);
         }
 
@@ -242,7 +251,9 @@ class ComplaintController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        if (!Auth::user()->isAdmin()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             return response()->json(['message' => 'Only admins can delete complaints'], 403);
         }
 

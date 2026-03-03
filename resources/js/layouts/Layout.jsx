@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import axios from 'axios';
+import { logout } from '@/utils/auth';
 
 export default function Layout({ children, title = 'Water Maintenance Log', user }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    const handleLogout = async () => {
-        try {
-            await axios.post('/api/logout');
-            window.location.href = '/';
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
+    const handleLogout = () => {
+        logout();
     };
 
     const navigation = user ? [
