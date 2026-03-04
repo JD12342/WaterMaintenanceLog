@@ -351,35 +351,39 @@ class WebDashboardController extends Controller
         return redirect('/dashboard?view=complaints');
     }
 
-    /** Admin: update user */
+    /** Admin: update user (name, email, password — no role editing) */
     public function updateUser(Request $request, User $user)
     {
         $request->validate([
-            'name'  => 'sometimes|string|max:255',
-            'email' => "sometimes|email|unique:users,email,{$user->id}",
-            'role'  => 'sometimes|in:ADMIN,ENGINEERING,MAINTENANCE,CONSUMER',
+            'name'     => 'sometimes|string|max:255',
+            'email'    => "sometimes|email|unique:users,email,{$user->id}",
+            'password' => 'sometimes|string|min:8',
         ]);
 
-        $user->update($request->only(['name', 'email', 'role']));
+        $data = $request->only(['name', 'email']);
+        if ($request->filled('password')) {
+            $data['password'] = Hash::make($request->password);
+        }
+
+        $user->update($data);
 
         return redirect('/dashboard?view=users');
     }
 
-    /** Admin: create user */
+    /** Admin: create maintenance staff user */
     public function createUser(Request $request)
     {
         $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users',
             'password' => 'required|string|min:8',
-            'role'     => 'required|in:ADMIN,ENGINEERING,MAINTENANCE,CONSUMER',
         ]);
 
         User::create([
             'name'     => $request->name,
             'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'role'     => $request->role,
+            'role'     => 'MAINTENANCE',
         ]);
 
         return redirect('/dashboard?view=users');
