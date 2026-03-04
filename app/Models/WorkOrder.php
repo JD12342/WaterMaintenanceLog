@@ -7,6 +7,27 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property int $id
+ * @property string $work_order_number
+ * @property int $complaint_id
+ * @property int $assigned_by
+ * @property int|null $assigned_to
+ * @property int|null $engineering_approved_by
+ * @property \Illuminate\Support\Carbon|null $engineering_approved_at
+ * @property string|null $engineering_notes
+ * @property string $status
+ * @property \Illuminate\Support\Carbon|null $estimated_completion_date
+ * @property \Illuminate\Support\Carbon|null $actual_completion_date
+ * @property string|null $assignment_notes
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read Complaint $complaint
+ * @property-read User $assignedByUser
+ * @property-read User|null $assignedToUser
+ * @property-read User|null $engineeringApprovedByUser
+ * @property-read MaintenanceReport|null $maintenanceReport
+ */
 class WorkOrder extends Model
 {
     use HasFactory;

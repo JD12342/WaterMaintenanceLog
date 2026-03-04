@@ -15,9 +15,3 @@ if (token) {
 } else {
     console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
-
-// Sanctum Token setup for API calls
-const sanctumToken = localStorage.getItem('sanctum_token');
-if (sanctumToken) {
-    window.axios.defaults.headers.common['Authorization'] = `Bearer ${sanctumToken}`;
-}

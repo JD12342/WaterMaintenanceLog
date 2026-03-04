@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 
 export default function SubmitComplaintModal({ onClose, onDone }) {
     const [form, setForm] = useState({
         title: '',
         location: '',
-        priority: 'medium',
+        priority: 'normal',
         description: ''
     });
     const [submitting, setSubmitting] = useState(false);
@@ -12,7 +13,7 @@ export default function SubmitComplaintModal({ onClose, onDone }) {
 
     const handleChange = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.title.trim() || !form.description.trim() || !form.location.trim()) {
             setError('Title, location, and description are required.');
@@ -20,14 +21,13 @@ export default function SubmitComplaintModal({ onClose, onDone }) {
         }
         setSubmitting(true);
         setError('');
-        try {
-            await window.axios.post('/api/v1/complaints', form);
-            onDone();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to submit complaint.');
-        } finally {
-            setSubmitting(false);
-        }
+        router.post('/dashboard/complaints', form, {
+            onSuccess: () => onDone(),
+            onError: (errors) => {
+                setError(Object.values(errors).flat().join(' ') || 'Failed to submit complaint.');
+                setSubmitting(false);
+            },
+        });
     };
 
     return (

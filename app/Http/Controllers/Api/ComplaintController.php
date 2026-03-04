@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Complaint;
+use App\Models\ComplaintApproval;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -167,8 +168,8 @@ class ComplaintController extends Controller
 
         $complaint = Complaint::findOrFail($id);
 
-        if ($complaint->status !== 'reviewed') {
-            return response()->json(['message' => 'Complaint must be reviewed first'], 400);
+        if (!in_array($complaint->status, ['pending', 'reviewed'])) {
+            return response()->json(['message' => 'Complaint must be pending or reviewed before submitting to engineering'], 400);
         }
 
         $complaint->update([
@@ -194,8 +195,14 @@ class ComplaintController extends Controller
         }
 
         $request->validate([
-            'damage_assessment' => 'required|string'
+            'engineering_assessment' => 'nullable|string',
+            'reason'                 => 'nullable|string',
+            'recommended_materials'  => 'nullable|string',
+            'estimated_hours'        => 'nullable|numeric',
         ]);
+
+        $assessment = $request->input('engineering_assessment')
+                    ?? $request->input('reason', '');
 
         $complaint = Complaint::findOrFail($id);
 
@@ -204,12 +211,23 @@ class ComplaintController extends Controller
         }
 
         $complaint->update([
-            'status' => 'approved',
-            'damage_assessment' => $request->damage_assessment
+            'status'            => 'approved',
+            'damage_assessment' => $assessment,
+        ]);
+
+        ComplaintApproval::create([
+            'complaint_id'           => $complaint->id,
+            'reviewed_by'            => Auth::id(),
+            'action'                 => 'approve',
+            'reason'                 => $request->input('reason'),
+            'engineering_assessment' => $request->input('engineering_assessment'),
+            'recommended_materials'  => $request->input('recommended_materials') ? [$request->input('recommended_materials')] : [],
+            'estimated_hours'        => $request->input('estimated_hours'),
+            'reviewed_at'            => now(),
         ]);
 
         return response()->json([
-            'message' => 'Complaint approved by engineering',
+            'message'   => 'Complaint approved by engineering',
             'complaint' => $complaint
         ]);
     }
@@ -226,8 +244,12 @@ class ComplaintController extends Controller
         }
 
         $request->validate([
-            'damage_assessment' => 'required|string'
+            'reason'             => 'nullable|string',
+            'damage_assessment'  => 'nullable|string',
         ]);
+
+        $assessment = $request->input('reason')
+                    ?? $request->input('damage_assessment', '');
 
         $complaint = Complaint::findOrFail($id);
 
@@ -236,12 +258,20 @@ class ComplaintController extends Controller
         }
 
         $complaint->update([
-            'status' => 'declined',
-            'damage_assessment' => $request->damage_assessment
+            'status'            => 'declined',
+            'damage_assessment' => $assessment,
+        ]);
+
+        ComplaintApproval::create([
+            'complaint_id'  => $complaint->id,
+            'reviewed_by'   => Auth::id(),
+            'action'        => 'decline',
+            'reason'        => $assessment,
+            'reviewed_at'   => now(),
         ]);
 
         return response()->json([
-            'message' => 'Complaint declined by engineering',
+            'message'   => 'Complaint declined by engineering',
             'complaint' => $complaint
         ]);
     }
@@ -291,7 +321,6 @@ class ComplaintController extends Controller
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'phone' => $request->phone,
                 'email_verified_at' => null, // They need to verify email later
                 'password' => bcrypt('temp123'), // Temporary password
                 'role' => \App\Models\UserRole::CONSUMER,

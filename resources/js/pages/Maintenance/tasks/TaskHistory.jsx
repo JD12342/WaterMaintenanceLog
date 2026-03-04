@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { EyeIcon } from '@heroicons/react/24/outline';
 
 const STATUS_BADGES = {
@@ -7,25 +7,8 @@ const STATUS_BADGES = {
     in_progress: 'bg-blue-100 text-blue-800'
 };
 
-export default function TaskHistory() {
-    const [reports, setReports] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function TaskHistory({ reports = [] }) {
     const [selected, setSelected] = useState(null);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await window.axios.get('/api/v1/maintenance/my-reports');
-                setReports(res.data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading task history...</div>;
 
     return (
         <div className="space-y-6">

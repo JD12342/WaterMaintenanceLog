@@ -1,190 +1,88 @@
-import { Head, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
 import PendingApprovals from './approvals/PendingApprovals';
 import ApprovedList from './approvals/ApprovedList';
 import DeclinedList from './approvals/DeclinedList';
 import EngineeringReportsList from './reports/ReportsList';
-import { 
+import {
     HomeIcon,
-    ExclamationTriangleIcon,
     ClockIcon,
     CheckCircleIcon,
     XMarkIcon,
-    ClipboardDocumentListIcon,
     ArrowRightOnRectangleIcon,
-    MagnifyingGlassIcon,
-    FunnelIcon,
-    EyeIcon,
-    CheckIcon,
-    CogIcon
+    CogIcon,
+    BellIcon,
+    ChartBarIcon
 } from '@heroicons/react/24/outline';
 
-export default function EngineeringDashboard({ auth }) {
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [dashboardData, setDashboardData] = useState(null);
-    const [pendingApprovals, setPendingApprovals] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedComplaint, setSelectedComplaint] = useState(null);
-    const [showApprovalModal, setShowApprovalModal] = useState(false);
-    const [approvalAction, setApprovalAction] = useState('approve');
+export default function EngineeringDashboard({ auth, dashboardData, viewData, currentView }) {
+    const { post } = useForm();
+    const handleLogout = () => post('/logout');
+    const navigateTo = (view) => router.get('/dashboard', { view }, { preserveScroll: true });
 
-    const { data, setData, post, processing } = useForm({
-        reason: '',
-        engineering_assessment: '',
-        recommended_materials: '',
-        estimated_hours: ''
-    });
-
-    useEffect(() => {
-        loadDashboard();
-        if (currentView === 'pending-approvals') {
-            loadPendingApprovals();
-        }
-    }, [currentView]);
-
-    const loadDashboard = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/dashboard');
-            setDashboardData(response.data);
-        } catch (error) {
-            console.error('Error loading dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadPendingApprovals = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/complaints?status=submitted_to_engineering');
-            setPendingApprovals(response.data);
-        } catch (error) {
-            console.error('Error loading pending approvals:', error);
-        }
-    };
-
-    const handleLogout = () => {
-        post('/logout');
-    };
-
-    const showApprovalDialog = (complaint, action) => {
-        setSelectedComplaint(complaint);
-        setApprovalAction(action);
-        setShowApprovalModal(true);
-        setData({
-            reason: '',
-            engineering_assessment: '',
-            recommended_materials: '',
-            estimated_hours: ''
-        });
-    };
-
-    const submitApproval = async () => {
-        if (!selectedComplaint) return;
-
-        try {
-            const endpoint = approvalAction === 'approve' 
-                ? `/api/v1/complaints/${selectedComplaint.id}/approve`
-                : `/api/v1/complaints/${selectedComplaint.id}/decline`;
-
-            await window.axios.post(endpoint, data);
-            setShowApprovalModal(false);
-            loadPendingApprovals();
-        } catch (error) {
-            console.error('Error submitting approval:', error);
-        }
-    };
-
-    const getStatusBadge = (status) => {
-        const badges = {
-            pending: 'bg-yellow-100 text-yellow-800',
-            submitted_to_engineering: 'bg-purple-100 text-purple-800',
-            approved: 'bg-green-100 text-green-800',
-            declined: 'bg-red-100 text-red-800',
-        };
-        return badges[status] || 'bg-gray-100 text-gray-800';
-    };
+    const navItems = [
+        { key: 'dashboard',         label: 'Overview',          icon: HomeIcon },
+        { key: 'pending-approvals', label: 'Pending Approvals', icon: ClockIcon },
+        { key: 'approved',          label: 'Approved',          icon: CheckCircleIcon },
+        { key: 'declined',          label: 'Declined',          icon: XMarkIcon },
+        { key: 'reports',           label: 'Reports',           icon: ChartBarIcon },
+    ];
 
     const Sidebar = () => (
-        <div className="w-64 bg-white shadow-lg h-screen fixed left-0 top-0 overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-                <h1 className="text-xl font-bold text-gray-900">Engineering</h1>
-                <p className="text-sm text-gray-500">Water Maintenance</p>
-            </div>
-            
-            <nav className="p-4 space-y-2">
-                <button
-                    onClick={() => setCurrentView('dashboard')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <HomeIcon className="h-5 w-5 mr-3" />
-                    Dashboard
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('pending-approvals')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'pending-approvals' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <ClockIcon className="h-5 w-5 mr-3" />
-                    Pending Approvals
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('approved')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'approved' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <CheckCircleIcon className="h-5 w-5 mr-3" />
-                    Approved Requests
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('declined')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'declined' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <XMarkIcon className="h-5 w-5 mr-3" />
-                    Declined Requests
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('reports')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'reports' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <ClipboardDocumentListIcon className="h-5 w-5 mr-3" />
-                    Reports
-                </button>
-                
-                <div className="pt-4 mt-4 border-t border-gray-200">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                        <ArrowRightOnRectangleIcon className="h-5 w-5 mr-3" />
-                        Logout
-                    </button>
+        <div className="w-64 bg-[#0f172a] h-screen fixed left-0 top-0 flex flex-col overflow-y-auto z-20">
+            <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                    <CogIcon className="w-5 h-5 text-white" />
                 </div>
+                <div>
+                    <p className="text-white font-semibold text-sm leading-tight">WaterLog</p>
+                    <p className="text-slate-400 text-xs">Engineering Dept</p>
+                </div>
+            </div>
+            <nav className="flex-1 px-3 py-4 space-y-1">
+                {navItems.map(({ key, label, icon: Icon }) => (
+                    <button
+                        key={key}
+                        onClick={() => navigateTo(key)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all ${
+                            currentView === key
+                                ? 'bg-indigo-500/20 text-indigo-400'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                    >
+                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        {label}
+                        {currentView === key && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+                    </button>
+                ))}
             </nav>
+            <div className="px-3 py-4 border-t border-white/10 space-y-1">
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
+                    <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {auth.user.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-white text-xs font-medium truncate">{auth.user.name}</p>
+                        <p className="text-slate-500 text-xs truncate">Engineer</p>
+                    </div>
+                </div>
+                <button onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-red-400 transition-all">
+                    <ArrowRightOnRectangleIcon className="h-5 w-5 flex-shrink-0" />
+                    Logout
+                </button>
+            </div>
         </div>
     );
 
-    const StatCard = ({ title, value, icon: Icon, color = 'blue' }) => (
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center">
-                <div className={`p-3 rounded-lg bg-${color}-100`}>
-                    <Icon className={`h-6 w-6 text-${color}-600`} />
+    const StatCard = ({ title, value, icon: Icon, accent = '#6366f1', bg = '#eef2ff', textColor = '#4338ca' }) => (
+        <div className="bg-white rounded-2xl shadow-sm p-5 border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+                <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{title}</p>
+                    <p className="text-3xl font-bold" style={{ color: textColor }}>{value}</p>
                 </div>
-                <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">{title}</p>
-                    <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
+                <div className="p-2.5 rounded-xl" style={{ backgroundColor: bg }}>
+                    <Icon className="h-5 w-5" style={{ color: accent }} />
                 </div>
             </div>
         </div>
@@ -192,95 +90,66 @@ export default function EngineeringDashboard({ auth }) {
 
     const DashboardView = () => (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Engineering Dashboard</h1>
-                    <p className="text-gray-600">Review and approve maintenance requests</p>
+                    <h1 className="text-2xl font-bold text-slate-800">Overview</h1>
+                    <p className="text-slate-500 text-sm mt-0.5">Review and approve maintenance requests</p>
                 </div>
-                <div className="text-sm text-gray-500">
-                    Last updated: {new Date().toLocaleDateString()}
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatCard 
-                    title="Pending Reviews" 
-                    value={dashboardData?.engineering_stats?.pending_reviews || 0}
-                    icon={ClockIcon}
-                    color="yellow" 
-                />
-                <StatCard 
-                    title="Approved This Week" 
-                    value={dashboardData?.engineering_stats?.approved_this_week || 0}
-                    icon={CheckCircleIcon}
-                    color="green" 
-                />
-                <StatCard 
-                    title="Declined This Week" 
-                    value={dashboardData?.engineering_stats?.declined_this_week || 0}
-                    icon={XMarkIcon}
-                    color="red" 
-                />
-                <StatCard 
-                    title="Total Reviews" 
-                    value={dashboardData?.engineering_stats?.total_reviews || 0}
-                    icon={CogIcon}
-                    color="blue" 
-                />
-            </div>
-
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Pending Reviews</h3>
-                    <div className="space-y-3">
-                        {pendingApprovals?.slice(0, 5).map((complaint) => (
-                            <div key={complaint.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-gray-900">{complaint.title}</p>
-                                    <p className="text-sm text-gray-600">{complaint.location}</p>
-                                </div>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => showApprovalDialog(complaint, 'approve')}
-                                        className="px-3 py-1 bg-green-100 text-green-700 rounded text-xs hover:bg-green-200"
-                                    >
-                                        Approve
-                                    </button>
-                                    <button
-                                        onClick={() => showApprovalDialog(complaint, 'decline')}
-                                        className="px-3 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
-                                    >
-                                        Decline
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                <div className="flex items-center gap-3">
+                    <div className="text-right">
+                        <p className="text-xs text-slate-400">Today</p>
+                        <p className="text-sm font-medium text-slate-600">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                     </div>
-                    <button 
-                        onClick={() => setCurrentView('pending-approvals')}
-                        className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                        View all pending reviews →
-                    </button>
+                    <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
+                        <BellIcon className="h-5 w-5 text-slate-500" />
+                    </div>
                 </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Decisions</h3>
-                    <div className="space-y-3">
-                        {dashboardData?.engineering_recent_decisions?.slice(0, 5).map((decision) => (
-                            <div key={decision.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-gray-900">{decision.complaint?.title}</p>
-                                    <p className="text-sm text-gray-600">{decision.action} • {new Date(decision.reviewed_at).toLocaleDateString()}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard title="Pending Reviews" value={dashboardData?.engineering_stats?.pending_reviews || 0} icon={ClockIcon} accent="#f59e0b" bg="#fffbeb" textColor="#b45309" />
+                <StatCard title="Approved This Week" value={dashboardData?.engineering_stats?.approved_this_week || 0} icon={CheckCircleIcon} accent="#10b981" bg="#ecfdf5" textColor="#065f46" />
+                <StatCard title="Declined This Week" value={dashboardData?.engineering_stats?.declined_this_week || 0} icon={XMarkIcon} accent="#ef4444" bg="#fef2f2" textColor="#b91c1c" />
+                <StatCard title="Total Reviews" value={dashboardData?.engineering_stats?.total_reviews || 0} icon={CogIcon} accent="#6366f1" bg="#eef2ff" textColor="#4338ca" />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-slate-800">Pending Reviews</h3>
+                        <button onClick={() => navigateTo('pending-approvals')} className="text-xs text-indigo-500 hover:text-indigo-600 font-medium">View all →</button>
+                    </div>
+                    <div className="space-y-2">
+                        {dashboardData?.pending_complaints?.slice(0, 5).map((complaint) => (
+                            <div key={complaint.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-slate-700 truncate">{complaint.title}</p>
+                                    <p className="text-xs text-slate-400 truncate">{complaint.location}</p>
                                 </div>
-                                <span className={`px-2 py-1 text-xs rounded-full ${
-                                    decision.action === 'approve' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                    {decision.action}
-                                </span>
                             </div>
                         ))}
+                        {(!dashboardData?.pending_complaints || dashboardData.pending_complaints.length === 0) && (
+                            <p className="text-sm text-slate-400 text-center py-4">No pending reviews</p>
+                        )}
+                    </div>
+                </div>
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-slate-800">Recent Decisions</h3>
+                    </div>
+                    <div className="space-y-2">
+                        {dashboardData?.engineering_recent_decisions?.slice(0, 5).map((decision) => (
+                            <div key={decision.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-slate-700 truncate">{decision.complaint?.title}</p>
+                                    <p className="text-xs text-slate-400">{decision.action} · {new Date(decision.reviewed_at).toLocaleDateString()}</p>
+                                </div>
+                                <span className={`px-2.5 py-1 text-xs rounded-full font-medium flex-shrink-0 ml-3 ${
+                                    decision.action === 'approve' ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                                }`}>{decision.action}</span>
+                            </div>
+                        ))}
+                        {(!dashboardData?.engineering_recent_decisions || dashboardData.engineering_recent_decisions.length === 0) && (
+                            <p className="text-sm text-slate-400 text-center py-4">No recent decisions</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -289,36 +158,23 @@ export default function EngineeringDashboard({ auth }) {
 
     const renderCurrentView = () => {
         switch (currentView) {
-            case 'dashboard':
-                return <DashboardView />;
             case 'pending-approvals':
-                return <PendingApprovals />;
+                return <PendingApprovals complaints={viewData?.complaints || []} />;
             case 'approved':
-                return <ApprovedList />;
+                return <ApprovedList complaints={viewData?.complaints || []} />;
             case 'declined':
-                return <DeclinedList />;
+                return <DeclinedList complaints={viewData?.complaints || []} />;
             case 'reports':
-                return <EngineeringReportsList />;
+                return <EngineeringReportsList reports={viewData?.reports || []} />;
             default:
                 return <DashboardView />;
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex">
-                <Sidebar />
-                <div className="ml-64 flex-1 flex items-center justify-center min-h-screen">
-                    <div className="text-xl text-gray-600">Loading...</div>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <>
             <Head title="Engineering Dashboard" />
-            <div className="flex bg-gray-50 min-h-screen">
+            <div className="flex bg-slate-50 min-h-screen">
                 <Sidebar />
                 <div className="ml-64 flex-1 p-8">
                     {renderCurrentView()}

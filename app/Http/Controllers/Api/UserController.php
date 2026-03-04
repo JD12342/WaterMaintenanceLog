@@ -18,7 +18,6 @@ class UserController extends Controller
     {
         return response()->json([
             'user' => $request->user(),
-            'tokens_count' => $request->user()->tokens()->count()
         ]);
     }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MagnifyingGlassIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 const STATUS_BADGES = {
@@ -7,30 +7,13 @@ const STATUS_BADGES = {
     completed: 'bg-green-100 text-green-800'
 };
 
-export default function EngineeringReportsList() {
-    const [reports, setReports] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function EngineeringReportsList({ reports = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selected, setSelected] = useState(null);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await window.axios.get('/api/v1/maintenance-reports');
-                setReports(res.data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
 
     const filtered = reports.filter(r =>
         r.work_description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading reports...</div>;
 
     return (
         <div className="space-y-6">
@@ -52,7 +35,7 @@ export default function EngineeringReportsList() {
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                {['Work Order', 'Technician', 'Description', 'Hours', 'Quality', 'Status', 'Date', ''].map(h => (
+                                {['Work Order', 'Technician', 'Description', 'Hours', 'Quality', 'Date', ''].map(h => (
                                     <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
                                 ))}
                             </tr>
@@ -61,16 +44,11 @@ export default function EngineeringReportsList() {
                             {filtered.map(r => (
                                 <tr key={r.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">#{r.work_order_id}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{r.user?.name || 'N/A'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{r.reported_by_user?.name || r.user?.name || 'N/A'}</td>
                                     <td className="px-6 py-4 text-sm text-gray-700 max-w-xs truncate">{r.work_description}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500">{r.hours_worked}h</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 capitalize">{r.work_quality}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${STATUS_BADGES[r.status] || 'bg-gray-100 text-gray-800'}`}>
-                                            {r.status?.replace('_', ' ')}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(r.created_at).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(r.reported_at || r.created_at).toLocaleDateString()}</td>
                                     <td className="px-6 py-4">
                                         <button onClick={() => setSelected(r)} className="text-blue-600 hover:text-blue-900"><EyeIcon className="h-4 w-4" /></button>
                                     </td>
@@ -90,15 +68,12 @@ export default function EngineeringReportsList() {
                             <button onClick={() => setSelected(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                         </div>
                         <div className="space-y-3 text-sm">
-                            <div><span className="font-medium">Technician:</span> {selected.user?.name || 'N/A'}</div>
+                            <div><span className="font-medium">Technician:</span> {selected.reported_by_user?.name || selected.user?.name || 'N/A'}</div>
                             <div><span className="font-medium">Hours Worked:</span> {selected.hours_worked}</div>
                             <div><span className="font-medium">Work Quality:</span> {selected.work_quality}</div>
                             <div><span className="font-medium">Work Description:</span>
                                 <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.work_description}</p>
                             </div>
-                            {selected.materials_used && <div><span className="font-medium">Materials Used:</span>
-                                <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.materials_used}</p>
-                            </div>}
                             {selected.completion_notes && <div><span className="font-medium">Completion Notes:</span>
                                 <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.completion_notes}</p>
                             </div>}

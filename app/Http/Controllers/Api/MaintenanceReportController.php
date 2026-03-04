@@ -65,27 +65,25 @@ class MaintenanceReportController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        if (!Auth::user()->isMaintenance()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isMaintenance()) {
             return response()->json(['message' => 'Only maintenance staff can submit reports'], 403);
         }
 
         $request->validate([
-            'work_order_id' => 'required|exists:work_orders,id',
-            'work_description' => 'required|string',
-            'materials_used' => 'required|array',
-            'materials_used.*.name' => 'required|string',
-            'materials_used.*.quantity' => 'required|numeric|min:0',
-            'materials_used.*.unit' => 'required|string',
-            'materials_used.*.unit_cost' => 'sometimes|numeric|min:0',
-            'hours_worked' => 'required|numeric|min:0.1|max:99.99',
-            'completion_notes' => 'nullable|string',
-            'work_quality' => 'required|in:excellent,good,satisfactory,needs_followup',
+            'work_order_id'   => 'required|exists:work_orders,id',
+            'work_description'=> 'required|string',
+            'materials_used'  => 'nullable',          // string or array both accepted
+            'hours_worked'    => 'required|numeric|min:0.1|max:99.99',
+            'completion_notes'=> 'nullable|string',
+            'work_quality'    => 'required|in:excellent,good,satisfactory,fair,needs_followup',
             'requires_followup' => 'boolean',
-            'followup_notes' => 'required_if:requires_followup,true|nullable|string',
-            'work_started_at' => 'required|date|before:work_completed_at',
-            'work_completed_at' => 'required|date|before_or_equal:now',
-            'photos' => 'sometimes|array|max:5',
-            'photos.*' => 'image|mimes:jpeg,png,jpg|max:2048'
+            'followup_notes'  => 'required_if:requires_followup,true|nullable|string',
+            'work_started_at' => 'nullable|date',
+            'work_completed_at'=> 'nullable|date',
+            'photos'          => 'sometimes|array|max:5',
+            'photos.*'        => 'image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
         $workOrder = WorkOrder::findOrFail($request->work_order_id);
@@ -105,6 +103,22 @@ class MaintenanceReportController extends Controller
             return response()->json(['message' => 'Maintenance report already exists for this work order'], 400);
         }
 
+        // Normalise materials_used — accept plain string or array
+        $materialsRaw = $request->materials_used;
+        if (is_string($materialsRaw)) {
+            $materials = collect(preg_split('/\r?\n/', $materialsRaw))
+                ->filter()
+                ->values()
+                ->map(fn($line) => ['name' => trim($line), 'quantity' => 1, 'unit' => 'unit'])
+                ->toArray();
+        } else {
+            $materials = $materialsRaw ?? [];
+        }
+
+        // Default timestamps if not provided
+        $startedAt   = $request->work_started_at   ?? now()->subHours((float) $request->hours_worked);
+        $completedAt = $request->work_completed_at ?? now();
+
         DB::beginTransaction();
         try {
             // Handle photo uploads
@@ -118,19 +132,19 @@ class MaintenanceReportController extends Controller
 
             // Create maintenance report
             $report = MaintenanceReport::create([
-                'work_order_id' => $workOrder->id,
-                'reported_by' => Auth::id(),
+                'work_order_id'    => $workOrder->id,
+                'reported_by'      => Auth::id(),
                 'work_description' => $request->work_description,
-                'materials_used' => $request->materials_used,
-                'hours_worked' => $request->hours_worked,
+                'materials_used'   => $materials,
+                'hours_worked'     => $request->hours_worked,
                 'completion_notes' => $request->completion_notes,
-                'photos' => $photosPaths,
-                'work_quality' => $request->work_quality,
-                'requires_followup' => $request->boolean('requires_followup'),
-                'followup_notes' => $request->followup_notes,
-                'work_started_at' => $request->work_started_at,
-                'work_completed_at' => $request->work_completed_at,
-                'reported_at' => now()
+                'photos'           => $photosPaths,
+                'work_quality'     => $request->work_quality,
+                'requires_followup'=> $request->boolean('requires_followup'),
+                'followup_notes'   => $request->followup_notes,
+                'work_started_at'  => $startedAt,
+                'work_completed_at'=> $completedAt,
+                'reported_at'      => now()
             ]);
 
             // Update work order status
@@ -179,6 +193,7 @@ class MaintenanceReportController extends Controller
             'reportedByUser'
         ])->findOrFail($id);
 
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         // Check authorization
@@ -197,6 +212,7 @@ class MaintenanceReportController extends Controller
     public function update(Request $request, string $id): JsonResponse
     {
         $report = MaintenanceReport::findOrFail($id);
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         // Check authorization - only reporter or admin can update
@@ -229,6 +245,7 @@ class MaintenanceReportController extends Controller
      */
     public function getStats(): JsonResponse
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         if ($user->isConsumer()) {
@@ -263,7 +280,9 @@ class MaintenanceReportController extends Controller
      */
     public function getCompletedWorkOrders(): JsonResponse
     {
-        if (!Auth::user()->isMaintenance()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isMaintenance()) {
             return response()->json(['message' => 'Only maintenance staff can access this'], 403);
         }
 
@@ -283,7 +302,9 @@ class MaintenanceReportController extends Controller
      */
     public function destroy(string $id): JsonResponse
     {
-        if (!Auth::user()->isAdmin()) {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             return response()->json(['message' => 'Only admins can delete maintenance reports'], 403);
         }
 

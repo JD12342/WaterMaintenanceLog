@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { MagnifyingGlassIcon, EyeIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
+import { router } from '@inertiajs/react';
+import { MagnifyingGlassIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
 const ROLE_BADGES = {
     ADMIN: 'bg-red-100 text-red-800',
@@ -8,56 +9,30 @@ const ROLE_BADGES = {
     CONSUMER: 'bg-green-100 text-green-800'
 };
 
-export default function UsersList() {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function UsersList({ users = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [editUser, setEditUser] = useState(null);
     const [editRole, setEditRole] = useState('');
     const [saving, setSaving] = useState(false);
 
-    useEffect(() => {
-        loadUsers();
-    }, []);
-
-    const loadUsers = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/admin/users');
-            setUsers(response.data);
-        } catch (error) {
-            console.error('Error loading users:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const openEdit = (user) => {
         setEditUser(user);
         setEditRole(user.role);
     };
 
-    const saveRole = async () => {
+    const saveRole = () => {
         setSaving(true);
-        try {
-            await window.axios.put(`/api/v1/admin/users/${editUser.id}`, { role: editRole });
-            setEditUser(null);
-            loadUsers();
-        } catch (error) {
-            console.error('Error updating user role:', error);
-        } finally {
-            setSaving(false);
-        }
+        router.put(`/dashboard/users/${editUser.id}`, { role: editRole }, {
+            preserveScroll: true,
+            onSuccess: () => setEditUser(null),
+            onFinish: () => setSaving(false),
+        });
     };
 
-    const deleteUser = async (userId) => {
+    const deleteUser = (userId) => {
         if (!confirm('Are you sure you want to delete this user?')) return;
-        try {
-            await window.axios.delete(`/api/v1/admin/users/${userId}`);
-            loadUsers();
-        } catch (error) {
-            console.error('Error deleting user:', error);
-        }
+        router.delete(`/dashboard/users/${userId}`, { preserveScroll: true });
     };
 
     const filteredUsers = users.filter(u => {
@@ -68,8 +43,6 @@ export default function UsersList() {
         return matchSearch && matchRole;
     });
 
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading users...</div>;
-
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -77,24 +50,14 @@ export default function UsersList() {
                 <span className="text-sm text-gray-500">{users.length} total users</span>
             </div>
 
-            {/* Search & Filter */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-1 max-w-md">
                         <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-                        <input
-                            type="text"
-                            placeholder="Search users..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        />
+                        <input type="text" placeholder="Search users..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" />
                     </div>
-                    <select
-                        value={roleFilter}
-                        onChange={e => setRoleFilter(e.target.value)}
-                        className="border border-gray-300 rounded-lg px-3 py-2"
-                    >
+                    <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2">
                         <option value="all">All Roles</option>
                         <option value="ADMIN">Admin</option>
                         <option value="ENGINEERING">Engineering</option>
@@ -104,7 +67,6 @@ export default function UsersList() {
                 </div>
             </div>
 
-            {/* Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -128,20 +90,12 @@ export default function UsersList() {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${ROLE_BADGES[user.role] || 'bg-gray-100 text-gray-800'}`}>
-                                            {user.role}
-                                        </span>
+                                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${ROLE_BADGES[user.role] || 'bg-gray-100 text-gray-800'}`}>{user.role}</span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {new Date(user.created_at).toLocaleDateString()}
-                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(user.created_at).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm space-x-3">
-                                        <button onClick={() => openEdit(user)} className="text-blue-600 hover:text-blue-900" title="Edit Role">
-                                            <PencilIcon className="h-4 w-4 inline" />
-                                        </button>
-                                        <button onClick={() => deleteUser(user.id)} className="text-red-600 hover:text-red-900" title="Delete">
-                                            <TrashIcon className="h-4 w-4 inline" />
-                                        </button>
+                                        <button onClick={() => openEdit(user)} className="text-blue-600 hover:text-blue-900" title="Edit Role"><PencilIcon className="h-4 w-4 inline" /></button>
+                                        <button onClick={() => deleteUser(user.id)} className="text-red-600 hover:text-red-900" title="Delete"><TrashIcon className="h-4 w-4 inline" /></button>
                                     </td>
                                 </tr>
                             ))}
@@ -151,7 +105,6 @@ export default function UsersList() {
                 </div>
             </div>
 
-            {/* Edit Role Modal */}
             {editUser && (
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
                     <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm">
@@ -160,11 +113,7 @@ export default function UsersList() {
                             <button onClick={() => setEditUser(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
                         </div>
                         <p className="text-sm text-gray-600 mb-3">User: <span className="font-medium">{editUser.name}</span></p>
-                        <select
-                            value={editRole}
-                            onChange={e => setEditRole(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4"
-                        >
+                        <select value={editRole} onChange={e => setEditRole(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4">
                             <option value="ADMIN">Admin</option>
                             <option value="ENGINEERING">Engineering</option>
                             <option value="MAINTENANCE">Maintenance</option>

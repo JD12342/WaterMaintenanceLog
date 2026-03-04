@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import ApprovalModal from './ApprovalModal';
 
@@ -9,33 +9,14 @@ const PRIORITY_BADGES = {
     urgent: 'bg-red-100 text-red-800'
 };
 
-export default function PendingApprovals() {
-    const [complaints, setComplaints] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function PendingApprovals({ complaints = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeComplaint, setActiveComplaint] = useState(null);
-
-    const loadComplaints = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/engineering/pending');
-            setComplaints(response.data);
-        } catch (error) {
-            console.error('Error loading pending complaints:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadComplaints();
-    }, []);
 
     const filtered = complaints.filter(c =>
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.location?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading pending approvals...</div>;
 
     return (
         <div className="space-y-6">
@@ -46,21 +27,14 @@ export default function PendingApprovals() {
                 </span>
             </div>
 
-            {/* Search */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                 <div className="relative max-w-md">
                     <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-2.5" />
-                    <input
-                        type="text"
-                        placeholder="Search complaints..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                    />
+                    <input type="text" placeholder="Search complaints..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500" />
                 </div>
             </div>
 
-            {/* List */}
             <div className="space-y-4">
                 {filtered.map(complaint => (
                     <div key={complaint.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -80,10 +54,8 @@ export default function PendingApprovals() {
                                     {complaint.user && <span>By: {complaint.user.name}</span>}
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setActiveComplaint(complaint)}
-                                className="ml-4 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 whitespace-nowrap"
-                            >
+                            <button onClick={() => setActiveComplaint(complaint)}
+                                className="ml-4 px-4 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 whitespace-nowrap">
                                 Review
                             </button>
                         </div>
@@ -100,7 +72,6 @@ export default function PendingApprovals() {
                 <ApprovalModal
                     complaint={activeComplaint}
                     onClose={() => setActiveComplaint(null)}
-                    onDone={() => { setActiveComplaint(null); loadComplaints(); }}
                 />
             )}
         </div>

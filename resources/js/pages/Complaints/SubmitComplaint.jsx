@@ -15,7 +15,7 @@ export default function SubmitComplaint({ auth }) {
     const submit = (e) => {
         e.preventDefault();
         
-        post('/api/complaints', {
+        post('/dashboard/complaints', {
             onSuccess: () => {
                 setSubmitted(true);
                 reset();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 
 /**
  * SubmitReport can be used two ways:
@@ -20,7 +21,7 @@ export default function SubmitReport({ workOrder = null, onClose = null, onDone 
 
     const handleChange = (field, value) => setForm(f => ({ ...f, [field]: value }));
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.work_description.trim() || !form.hours_worked) {
             setError('Work description and hours worked are required.');
@@ -28,15 +29,17 @@ export default function SubmitReport({ workOrder = null, onClose = null, onDone 
         }
         setSubmitting(true);
         setError('');
-        try {
-            await window.axios.post('/api/v1/maintenance-reports', form);
-            setSuccess(true);
-            if (onDone) onDone();
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to submit report.');
-        } finally {
-            setSubmitting(false);
-        }
+        router.post('/dashboard/reports', form, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSuccess(true);
+                if (onDone) onDone();
+            },
+            onError: (errors) => {
+                setError(Object.values(errors).flat().join(' ') || 'Failed to submit report.');
+                setSubmitting(false);
+            },
+        });
     };
 
     const formContent = (

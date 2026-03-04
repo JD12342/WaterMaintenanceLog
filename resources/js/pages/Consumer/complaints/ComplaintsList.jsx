@@ -1,58 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import { PlusIcon, EyeIcon } from '@heroicons/react/24/outline';
 import SubmitComplaintModal from './SubmitComplaintModal';
 
 const STATUS_BADGES = {
-    submitted: 'bg-gray-100 text-gray-700',
-    under_review: 'bg-yellow-100 text-yellow-800',
-    forwarded_to_engineering: 'bg-purple-100 text-purple-800',
+    pending: 'bg-yellow-100 text-yellow-800',
+    reviewed: 'bg-blue-100 text-blue-800',
+    submitted_to_engineering: 'bg-purple-100 text-purple-800',
     approved: 'bg-green-100 text-green-800',
     declined: 'bg-red-100 text-red-800',
-    work_order_created: 'bg-blue-100 text-blue-800',
-    in_progress: 'bg-blue-100 text-blue-800',
-    completed: 'bg-green-100 text-green-800'
+    assigned: 'bg-indigo-100 text-indigo-800',
+    in_progress: 'bg-orange-100 text-orange-800',
+    completed: 'bg-emerald-100 text-emerald-800',
+    closed: 'bg-gray-100 text-gray-800'
 };
 
 const STATUS_LABELS = {
-    submitted: 'Submitted',
-    under_review: 'Under Review',
-    forwarded_to_engineering: 'Engineering Review',
+    pending: 'Pending',
+    reviewed: 'Reviewed',
+    submitted_to_engineering: 'Engineering Review',
     approved: 'Approved',
     declined: 'Declined',
-    work_order_created: 'Work Order Created',
+    assigned: 'Assigned',
     in_progress: 'In Progress',
-    completed: 'Completed'
+    completed: 'Completed',
+    closed: 'Closed'
 };
 
 const PRIORITY_BADGES = {
     low: 'bg-green-100 text-green-800',
-    medium: 'bg-yellow-100 text-yellow-800',
+    normal: 'bg-yellow-100 text-yellow-800',
     high: 'bg-orange-100 text-orange-800',
     urgent: 'bg-red-100 text-red-800'
 };
 
-export default function ConsumerComplaintsList() {
-    const [complaints, setComplaints] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function ConsumerComplaintsList({ complaints = [] }) {
     const [showModal, setShowModal] = useState(false);
     const [selected, setSelected] = useState(null);
-
-    const loadComplaints = async () => {
-        try {
-            const res = await window.axios.get('/api/v1/my-complaints');
-            setComplaints(res.data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadComplaints();
-    }, []);
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading your complaints...</div>;
 
     return (
         <div className="space-y-6">
@@ -107,7 +91,7 @@ export default function ConsumerComplaintsList() {
             {showModal && (
                 <SubmitComplaintModal
                     onClose={() => setShowModal(false)}
-                    onDone={() => { setShowModal(false); loadComplaints(); }}
+                    onDone={() => { setShowModal(false); router.get('/dashboard', { view: 'complaints' }, { preserveScroll: true }); }}
                 />
             )}
 

@@ -5,7 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\UserRole;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {

@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Head } from '@inertiajs/react';
-import axios from 'axios';
-import Dashboard from './Dashboard';
+import { Head, router, usePage } from '@inertiajs/react';
 import { 
     UserGroupIcon, 
     CogIcon, 
@@ -17,11 +15,6 @@ import {
 export default function Home({ auth }) {
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [showComplaintForm, setShowComplaintForm] = useState(false);
-    
-    // If user is authenticated, redirect to dashboard
-    if (auth.user) {
-        return <Dashboard auth={auth} />;
-    }
 
     const ComplaintForm = () => {
         const [data, setFormData] = useState({
@@ -40,25 +33,22 @@ export default function Home({ auth }) {
 
         const reset = () => setFormData({ name: '', email: '', phone: '', location: '', description: '', priority: 'normal' });
 
-        const submit = async (e) => {
+        const submit = (e) => {
             e.preventDefault();
             setProcessing(true);
             setErrors({});
-            try {
-                const response = await axios.post('/api/complaints/public', data);
-                const ref = response.data.reference_number ?? '';
-                reset();
-                setProcessing(false);
-                setShowComplaintForm(false);
-                alert(`Complaint submitted successfully!${ref ? ' Reference: ' + ref : ''} We will contact you soon.`);
-            } catch (error) {
-                setProcessing(false);
-                if (error.response?.status === 422) {
-                    setErrors(error.response.data.errors ?? {});
-                } else {
-                    alert('Something went wrong. Please try again.');
-                }
-            }
+            router.post('/complaints/public', data, {
+                onSuccess: () => {
+                    reset();
+                    setProcessing(false);
+                    setShowComplaintForm(false);
+                    alert('Complaint submitted successfully! We will contact you soon.');
+                },
+                onError: (errors) => {
+                    setProcessing(false);
+                    setErrors(errors);
+                },
+            });
         };
 
         return (

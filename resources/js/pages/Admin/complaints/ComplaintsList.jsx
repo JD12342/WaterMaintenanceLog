@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import {
     MagnifyingGlassIcon,
     FunnelIcon,
@@ -26,68 +27,33 @@ const PRIORITY_BADGES = {
     low: 'bg-gray-100 text-gray-800'
 };
 
-export default function ComplaintsList() {
-    const [complaints, setComplaints] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function ComplaintsList({ complaints = [], maintenanceStaff = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [maintenanceStaff, setMaintenanceStaff] = useState([]);
     const [showAssignModal, setShowAssignModal] = useState(false);
     const [selectedComplaint, setSelectedComplaint] = useState(null);
     const [assignTo, setAssignTo] = useState('');
     const [viewComplaint, setViewComplaint] = useState(null);
 
-    useEffect(() => {
-        loadComplaints();
-    }, []);
-
-    const loadComplaints = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/complaints');
-            setComplaints(response.data);
-        } catch (error) {
-            console.error('Error loading complaints:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadMaintenanceStaff = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/maintenance-staff');
-            setMaintenanceStaff(response.data);
-        } catch (error) {
-            console.error('Error loading maintenance staff:', error);
-        }
-    };
-
-    const forwardToEngineering = async (complaintId) => {
-        try {
-            await window.axios.post(`/api/v1/complaints/${complaintId}/submit-to-engineering`);
-            loadComplaints();
-        } catch (error) {
-            console.error('Error forwarding to engineering:', error);
-        }
+    const forwardToEngineering = (complaintId) => {
+        router.post(`/dashboard/complaints/${complaintId}/forward`, {}, { preserveScroll: true });
     };
 
     const openAssignModal = (complaint) => {
         setSelectedComplaint(complaint);
-        loadMaintenanceStaff();
         setShowAssignModal(true);
     };
 
-    const assignWorkOrder = async () => {
+    const assignWorkOrder = () => {
         if (!assignTo) return;
-        try {
-            await window.axios.post(`/api/v1/work-orders`, {
-                complaint_id: selectedComplaint.id,
-                assigned_to: assignTo
-            });
-            setShowAssignModal(false);
-            loadComplaints();
-        } catch (error) {
-            console.error('Error assigning work order:', error);
-        }
+        router.post('/dashboard/work-orders', {
+            complaint_id: selectedComplaint.id,
+            assigned_to: assignTo
+        }, {
+            preserveScroll: true,
+            onSuccess: () => setShowAssignModal(false),
+            onError: (errors) => console.error('Error assigning:', errors),
+        });
     };
 
     const filteredComplaints = complaints.filter(c => {
@@ -98,8 +64,6 @@ export default function ComplaintsList() {
         const matchStatus = statusFilter === 'all' || c.status === statusFilter;
         return matchSearch && matchStatus;
     });
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading complaints...</div>;
 
     return (
         <div className="space-y-6">
@@ -240,7 +204,7 @@ export default function ComplaintsList() {
                             </div>
                             <div className="flex justify-end gap-3">
                                 <button onClick={() => setShowAssignModal(false)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Cancel</button>
-                                <button onClick={assignWorkOrder} disabled={!assignTo} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">Assign</button>
+                                <button onClick={assignWorkOrder} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Assign</button>
                             </div>
                         </div>
                     </div>

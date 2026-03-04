@@ -1,21 +1,39 @@
 # Water Maintenance Log System
 
-A full-stack **Laravel 12 + React** water maintenance management system with role-based access control, Supabase PostgreSQL, and Laravel Sanctum authentication.
+A full-stack **Laravel 12 + React + Inertia.js** water maintenance management system with role-based access control, Supabase PostgreSQL, and session-based authentication.
 
-**System Version**: 1.0 | **Last Updated**: March 4, 2026 | **Status**: ✅ Ready for Production Use
+**System Version**: 2.0 | **Last Updated**: March 4, 2026 | **Status**: ✅ Ready for Production Use
+
+---
+
+## Architecture
+
+The application uses **Inertia.js** as the bridge between the Laravel backend and React frontend. There are **no API calls from the frontend** — all data is loaded server-side via `WebDashboardController` and passed as Inertia props. Navigation between views uses `router.get()` / `router.post()` from `@inertiajs/react`.
+
+```
+Browser ←→ Inertia.js ←→ Laravel (WebDashboardController) ←→ Supabase PostgreSQL
+```
+
+- **Auth**: Cookie/session-based (Laravel Fortify) — no Sanctum tokens on the frontend
+- **Data flow**: Server renders Inertia pages with `{auth, dashboardData, viewData, currentView}` props
+- **Mutations**: `router.post()` to web routes → controller → redirect back with fresh data
+- **Public complaints**: Unauthenticated users can submit complaints from the homepage
+
+> The REST API (`routes/api.php`) still exists for potential mobile app or third-party integration but is **not used by the React frontend**.
 
 ---
 
 ## Features
 
 - ✅ **React Frontend** (JavaScript, no TypeScript) with Inertia.js
-- ✅ **Laravel Sanctum** token-based API authentication
+- ✅ **Session-based authentication** (cookie sessions via Laravel Fortify)
 - ✅ **Role-based access control** (ADMIN, ENGINEERING, MAINTENANCE, CONSUMER)
-- ✅ **Role-specific dashboards** for each user type
+- ✅ **Role-specific dashboards** with server-side data loading
+- ✅ **Public complaint submission** (no login required)
 - ✅ **Password change** functionality for all users
 - ✅ Supabase PostgreSQL database support
-- ✅ CORS enabled for API access
-- ✅ No public self-registration — admin creates all accounts
+- ✅ No public self-registration — admin creates all staff accounts
+- ✅ No frontend API calls — all data via Inertia server-side props
 
 ---
 
@@ -85,46 +103,64 @@ Server runs at: `http://127.0.0.1:8000`
 
 ### Backend (PHP/Laravel)
 ```
-app/Http/Controllers/Api/
-├── Admin/
-│   └── UserManagementController.php    # Admin user management
-├── ComplaintController.php              # Complaint management
-├── DashboardController.php              # Role-based dashboards
-├── MaintenanceReportController.php      # Maintenance reports
-├── UserController.php                   # Password change, profile
-└── WorkOrderController.php              # Work order management
+app/Http/Controllers/
+├── WebDashboardController.php           # Main controller — all Inertia rendering & mutations
+│
+├── Api/                                  # REST API (kept for mobile/third-party, not used by frontend)
+│   ├── Admin/
+│   │   └── UserManagementController.php
+│   ├── ComplaintController.php
+│   ├── DashboardController.php
+│   ├── MaintenanceReportController.php
+│   ├── UserController.php
+│   └── WorkOrderController.php
 
 app/Http/Middleware/
+├── HandleInertiaRequests.php            # Shares auth & Ziggy props to all Inertia pages
 ├── RoleMiddleware.php                   # Role-based access control
 ├── AdminAccess.php
 ├── EngineeringAccess.php
 └── MaintenanceAccess.php
+
+routes/
+├── web.php                              # All frontend routes (Inertia-rendered)
+└── api.php                              # REST API routes (not used by frontend)
 ```
 
-### Frontend (React)
+### Frontend (React + Inertia.js)
 ```
 resources/js/pages/
+├── Home.jsx                             # Public landing page + complaint form
 ├── Admin/
-│   ├── Dashboard.jsx
-│   ├── complaints/ComplaintsList.jsx
-│   ├── reports/ReportsList.jsx
-│   ├── users/UsersList.jsx
-│   └── work-orders/WorkOrdersList.jsx
+│   ├── Dashboard.jsx                    # Admin overview, navigation, stat cards
+│   ├── complaints/ComplaintsList.jsx    # All complaints + forward/assign actions
+│   ├── reports/ReportsList.jsx          # Maintenance reports viewer
+│   ├── users/UsersList.jsx             # User management (create/edit/delete)
+│   └── work-orders/WorkOrdersList.jsx  # Work orders management
 ├── Engineering/
-│   ├── Dashboard.jsx
-│   └── approvals/ (PendingApprovals, ApprovedList, DeclinedList)
+│   ├── Dashboard.jsx                    # Engineering overview + navigation
+│   └── approvals/
+│       ├── PendingApprovals.jsx         # Review & approve/decline complaints
+│       ├── ApprovedList.jsx
+│       └── DeclinedList.jsx
 ├── Maintenance/
-│   ├── Dashboard.jsx
-│   ├── reports/SubmitReport.jsx
-│   └── tasks/ (AssignedTasks, TaskHistory)
+│   ├── Dashboard.jsx                    # Maintenance overview + task cards
+│   ├── reports/SubmitReport.jsx         # Submit work completion report
+│   └── tasks/
+│       ├── AssignedTasks.jsx            # Active task list with start/complete actions
+│       └── TaskHistory.jsx             # Completed task history
 └── Consumer/
-    ├── Dashboard.jsx
-    └── complaints/ (ComplaintsList, SubmitComplaintModal)
+    ├── Dashboard.jsx                    # Consumer overview + complaint stats
+    └── complaints/
+        ├── ComplaintsList.jsx           # User's complaints list
+        └── SubmitComplaintModal.jsx     # Submit new complaint modal
 ```
 
 ### Key Files
-- `routes/api.php` — All API endpoint definitions
-- `app/Http/Middleware/RoleMiddleware.php` — Role-based access control
+- `routes/web.php` — All web routes (Inertia-rendered pages + POST mutations)
+- `app/Http/Controllers/WebDashboardController.php` — Central controller for all dashboard logic
+- `app/Http/Middleware/HandleInertiaRequests.php` — Shares `auth` and `ziggy` props
+- `bootstrap/app.php` — Middleware configuration (Inertia, CSRF exceptions)
 - `database/seeders/AdminEngineeringSeeder.php` — Initial account creation
 - `app/Models/User.php` — User model with roles enum
 
@@ -135,13 +171,14 @@ resources/js/pages/
 ### ADMIN
 - ✅ Create and manage all users (including maintenance staff)
 - ✅ View all complaints and work orders
+- ✅ Forward complaints to engineering
 - ✅ Assign work orders to maintenance staff
 - ✅ Full system access
 
 ### ENGINEERING
 - ✅ Review, approve, and decline complaints
 - ✅ Monitor approved work orders
-- ✅ View engineering dashboard
+- ✅ View engineering-specific dashboard and reports
 
 ### MAINTENANCE
 - ✅ View assigned work orders
@@ -150,11 +187,14 @@ resources/js/pages/
 - ✅ View own work history
 
 ### CONSUMER
-- ✅ Submit complaints
+- ✅ Submit complaints (authenticated)
 - ✅ View own complaint status
 - ✅ Track work order progress
 
-> All roles can change their own password at any time.
+### PUBLIC (no login required)
+- ✅ Submit complaints from the homepage
+
+> All authenticated roles can change their own password at any time.
 
 ---
 
@@ -162,149 +202,109 @@ resources/js/pages/
 
 | Dashboard | Key Stats |
 |-----------|-----------|
-| **Admin** | Pending complaints, pending assignments, active work orders, total users |
-| **Engineering** | Pending reviews, approved/declined this month, complaints table |
-| **Maintenance** | Assigned work, completed this month, reports pending |
-| **Consumer** | Total/pending/approved/completed complaints |
+| **Admin** | Pending complaints, pending assignments, active work orders, completed this month, total users |
+| **Engineering** | Pending reviews, approved/declined this week, total reviews, pending complaints list |
+| **Maintenance** | Assigned tasks, in-progress tasks, completed this month, hours this month |
+| **Consumer** | Total complaints, pending, in progress, completed |
 
 ---
 
-## API Endpoints
+## Web Routes
 
-### Public Endpoints
+### Public Routes
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/` | Homepage with public complaint form |
+| POST | `/complaints/public` | Submit complaint without login (CSRF-exempt) |
+| GET | `/login` | Staff login page |
+| POST | `/login` | Authenticate user |
+| POST | `/logout` | Logout (destroy session) |
+
+### Authenticated Routes (session required)
+
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/dashboard` | Role-specific dashboard (accepts `?view=` query parameter) |
+| POST | `/dashboard/complaints` | Submit complaint (Consumer) |
+| POST | `/dashboard/complaints/{id}/forward` | Forward complaint to engineering (Admin) |
+| POST | `/dashboard/complaints/{id}/approve` | Approve complaint (Engineering) |
+| POST | `/dashboard/complaints/{id}/decline` | Decline complaint (Engineering) |
+| POST | `/dashboard/work-orders` | Create & assign work order (Admin) |
+| POST | `/dashboard/work-orders/{id}/start` | Start work on order (Maintenance) |
+| POST | `/dashboard/work-orders/{id}/complete` | Complete work order (Maintenance) |
+| POST | `/dashboard/reports` | Submit maintenance report (Maintenance) |
+| POST | `/dashboard/users` | Create user (Admin) |
+| PUT | `/dashboard/users/{id}` | Update user (Admin) |
+| DELETE | `/dashboard/users/{id}` | Delete user (Admin) |
+
+### Dashboard Views (via `?view=` parameter)
+
+| Role | View Parameter | Content |
+|------|---------------|---------|
+| All | `dashboard` (default) | Overview stats + recent items |
+| Admin | `complaints` | All complaints list |
+| Admin | `work-orders` | All work orders list |
+| Admin | `users` | User management |
+| Admin | `reports` | Maintenance reports |
+| Engineering | `pending-approvals` | Complaints awaiting review |
+| Engineering | `approved` | Approved complaints |
+| Engineering | `declined` | Declined complaints |
+| Engineering | `reports` | Maintenance reports |
+| Maintenance | `assigned-tasks` | Active assigned work orders |
+| Maintenance | `task-history` | Completed work history |
+| Maintenance | `submit-report` | Report submission form |
+| Consumer | `complaints` | User's own complaints |
+
+---
+
+## REST API (Optional — for mobile/third-party)
+
+The REST API at `/api/v1/` is fully functional but **not used by the React frontend**. It uses Laravel Sanctum bearer token authentication.
+
+### Public API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Health check |
-| POST | `/api/login` | User login |
+| POST | `/api/login` | Login (returns bearer token) |
 | GET | `/api/v1/status` | API status |
 
-### All Authenticated Users (Bearer Token required)
+### Authenticated API Endpoints (Bearer Token)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/user` | Get authenticated user |
 | GET | `/api/v1/dashboard` | Role-specific dashboard data |
 | GET | `/api/v1/complaints` | Get complaints (filtered by role) |
-| POST | `/api/v1/complaints` | Submit complaint (Consumer) |
+| POST | `/api/v1/complaints` | Submit complaint |
 | GET | `/api/v1/work-orders` | Get work orders (filtered by role) |
 | GET | `/api/v1/maintenance-reports` | Get maintenance reports |
-| POST | `/api/change-password` | Change own password |
-| POST | `/api/logout` | Logout (revoke current token) |
-| POST | `/api/logout-all` | Logout from all devices |
+| POST | `/api/change-password` | Change password |
+| POST | `/api/logout` | Logout (revoke token) |
 
-### Admin Only (`role:ADMIN`)
+### Admin API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/v1/admin/users` | List all users |
-| POST | `/api/v1/admin/users` | Create new user/staff |
-| GET | `/api/v1/admin/users/{id}` | Get specific user |
+| POST | `/api/v1/admin/users` | Create user |
 | PUT | `/api/v1/admin/users/{id}` | Update user |
 | DELETE | `/api/v1/admin/users/{id}` | Delete user |
-| POST | `/api/v1/admin/users/{user}/role` | Update user role |
-| GET | `/api/v1/admin/maintenance-staff` | List all maintenance workers |
-
-### Engineering & Maintenance (`role:ENGINEERING,MAINTENANCE`)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/maintenance/reports` | Access maintenance reports |
-
-### Maintenance Only (`role:MAINTENANCE`)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/maintenance/work-orders` | Create work orders |
-
----
-
-## API Usage Examples
-
-### Login
-```bash
-curl -X POST http://localhost:8000/api/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@watermaintenance.local",
-    "password": "Admin123!"
-  }'
-```
-**Response:**
-```json
-{
-  "user": { "id": 1, "name": "Admin", "email": "admin@watermaintenance.local", "role": "ADMIN" },
-  "token": "1|xxxxxxxxxxxxx",
-  "token_type": "Bearer"
-}
-```
-
-### Get User Profile
-```bash
-curl -X GET http://localhost:8000/api/user \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
-
-### Change Password
-```bash
-curl -X POST http://localhost:8000/api/change-password \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "current_password": "Admin123!",
-    "new_password": "NewSecurePassword123!",
-    "new_password_confirmation": "NewSecurePassword123!"
-  }'
-```
-
-### Create a New Staff Account (Admin only)
-```bash
-curl -X POST http://localhost:8000/api/v1/admin/users \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Worker",
-    "email": "john@maintenance.local",
-    "password": "SecurePassword123!",
-    "role": "MAINTENANCE"
-  }'
-```
-Available roles: `ADMIN`, `ENGINEERING`, `MAINTENANCE`, `CONSUMER`
-
-### Access Admin-Only Route
-```bash
-curl -X GET http://localhost:8000/api/v1/admin/users \
-  -H "Authorization: Bearer YOUR_ADMIN_TOKEN"
-```
-
-### Access Denied Response (403)
-```json
-{
-  "error": "Forbidden",
-  "message": "You do not have permission to access this resource",
-  "required_roles": ["ADMIN"],
-  "user_role": "CONSUMER"
-}
-```
-
-### Logout
-```bash
-curl -X POST http://localhost:8000/api/logout \
-  -H "Authorization: Bearer YOUR_TOKEN"
-```
 
 ---
 
 ## Security Features
 
-- ✅ No public self-registration — admin creates all accounts
-- ✅ Bearer token authentication (Laravel Sanctum)
+- ✅ No public self-registration — admin creates all staff accounts
+- ✅ Session-based authentication with encrypted cookies
+- ✅ CSRF protection on all POST routes (public complaint route exempted)
 - ✅ Role-based access control via middleware
-- ✅ Password hashing with bcrypt
-- ✅ Token revocation on logout
+- ✅ Password hashing with bcrypt (12 rounds)
+- ✅ Session invalidation on logout (no DB queries)
 - ✅ API throttling (60 requests/minute)
-- ✅ CORS configured for API access
-- ✅ SQL injection protection via Eloquent ORM
+- ✅ SQL injection protection via Eloquent ORM & parameterized queries
+- ✅ Inertia.js prevents direct page access without server-side auth check
 
 ---
 
@@ -313,13 +313,15 @@ curl -X POST http://localhost:8000/api/logout \
 ```env
 APP_ENV=production
 APP_DEBUG=false
+SESSION_DRIVER=cookie
+SESSION_SECURE_COOKIE=true
 ```
 
 - Install PostgreSQL PHP extension: `apt-get install php-pgsql`
 - Configure SSL connection for Supabase (`DB_SSLMODE=require`)
-- Use HTTPS in production
+- Use HTTPS in production (required for secure cookies)
 - Never expose `.env` files
-- Update `config/cors.php` with your production domain
+- Set `SESSION_SECURE_COOKIE=true` in production
 
 ---
 
@@ -329,7 +331,10 @@ APP_DEBUG=false
 # Clear caches
 php artisan config:clear && php artisan route:clear
 
-# List all API routes
+# List all web routes
+php artisan route:list --path=/
+
+# List API routes (optional)
 php artisan route:list --path=api
 
 # Run tests
@@ -337,6 +342,13 @@ php artisan test
 
 # Code formatting
 ./vendor/bin/pint
+
+# Build frontend
+npm run build
+
+# Development server with hot reload
+npm run dev  # in one terminal
+php artisan serve  # in another terminal
 
 # Reset database and re-seed
 php artisan migrate:fresh
@@ -360,10 +372,19 @@ php artisan migrate:fresh
 php artisan db:seed --class=AdminEngineeringSeeder
 ```
 
-**Token not working?**
-- Include `Authorization: Bearer {token}` header in every request
-- Check the token hasn't been revoked
-- Login again to get a fresh token
+**419 Page Expired on public complaint form?**
+- Ensure `complaints/public` is listed in CSRF exceptions in `bootstrap/app.php`
+- Clear config cache: `php artisan config:clear`
+
+**Dashboard shows no data?**
+- Verify database connection in `.env`
+- Check `WebDashboardController::getDashboardStats()` for query errors
+- View logs: `storage/logs/laravel.log`
+
+**Blank page after login?**
+- Run `npm run build` to compile React assets
+- Check `resources/views/app.blade.php` includes `@vite` directive
+- Ensure `public/build/` directory exists
 
 **Check logs:**
 ```bash

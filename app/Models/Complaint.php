@@ -8,6 +8,24 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $title
+ * @property string $description
+ * @property string $location
+ * @property string $priority
+ * @property string $status
+ * @property string|null $damage_assessment
+ * @property string|null $admin_notes
+ * @property \Illuminate\Support\Carbon $submitted_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read User $user
+ * @property-read WorkOrder|null $workOrder
+ * @property-read \Illuminate\Database\Eloquent\Collection<ComplaintApproval> $approvals
+ * @property-read ComplaintApproval|null $latestApproval
+ */
 class Complaint extends Model
 {
     use HasFactory;

@@ -1,10 +1,9 @@
-import { Head, Link, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
 import ComplaintsList from './complaints/ComplaintsList';
 import WorkOrdersList from './work-orders/WorkOrdersList';
 import UsersList from './users/UsersList';
 import ReportsList from './reports/ReportsList';
-import { 
+import {
     HomeIcon,
     ExclamationTriangleIcon,
     ClockIcon,
@@ -12,92 +11,14 @@ import {
     UserGroupIcon,
     ClipboardDocumentListIcon,
     ArrowRightOnRectangleIcon,
-    MagnifyingGlassIcon,
-    FunnelIcon,
-    EyeIcon,
-    ForwardIcon,
-    PlusIcon
+    BellIcon,
+    ChartBarIcon
 } from '@heroicons/react/24/outline';
 
-export default function AdminDashboard({ auth }) {
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [dashboardData, setDashboardData] = useState(null);
-    const [complaints, setComplaints] = useState([]);
-    const [workOrders, setWorkOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [showAssignModal, setShowAssignModal] = useState(false);
-    const [selectedComplaint, setSelectedComplaint] = useState(null);
-    const [maintenanceStaff, setMaintenanceStaff] = useState([]);
-
+export default function AdminDashboard({ auth, dashboardData, viewData, currentView }) {
     const { post } = useForm();
-
-    useEffect(() => {
-        loadDashboard();
-        if (currentView === 'complaints') {
-            loadComplaints();
-        } else if (currentView === 'work-orders') {
-            loadWorkOrders();
-        }
-    }, [currentView]);
-
-    const loadDashboard = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/dashboard');
-            setDashboardData(response.data);
-        } catch (error) {
-            console.error('Error loading dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadComplaints = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/complaints');
-            setComplaints(response.data);
-        } catch (error) {
-            console.error('Error loading complaints:', error);
-        }
-    };
-
-    const loadWorkOrders = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/work-orders');
-            setWorkOrders(response.data);
-        } catch (error) {
-            console.error('Error loading work orders:', error);
-        }
-    };
-
-    const loadMaintenanceStaff = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/admin/maintenance-staff');
-            setMaintenanceStaff(response.data);
-        } catch (error) {
-            console.error('Error loading maintenance staff:', error);
-        }
-    };
-
-    const handleLogout = () => {
-        post('/logout');
-    };
-
-    const forwardToEngineering = async (complaintId) => {
-        try {
-            await window.axios.post(`/api/v1/complaints/${complaintId}/submit-to-engineering`);
-            loadComplaints();
-        } catch (error) {
-            console.error('Error forwarding to engineering:', error);
-        }
-    };
-
-    const showAssignmentModal = (complaint) => {
-        setSelectedComplaint(complaint);
-        loadMaintenanceStaff();
-        setShowAssignModal(true);
-    };
+    const handleLogout = () => post('/logout');
+    const navigateTo = (view) => router.get('/dashboard', { view }, { preserveScroll: true });
 
     const getStatusBadge = (status) => {
         const badges = {
@@ -114,86 +35,74 @@ export default function AdminDashboard({ auth }) {
         return badges[status] || 'bg-gray-100 text-gray-800';
     };
 
+    const navItems = [
+        { key: 'dashboard',   label: 'Overview',     icon: HomeIcon },
+        { key: 'complaints',  label: 'Complaints',   icon: ExclamationTriangleIcon },
+        { key: 'work-orders', label: 'Work Orders',  icon: ClipboardDocumentListIcon },
+        { key: 'users',       label: 'Users',        icon: UserGroupIcon },
+        { key: 'reports',     label: 'Reports',      icon: ChartBarIcon },
+    ];
+
     const Sidebar = () => (
-        <div className="w-64 bg-white shadow-lg h-screen fixed left-0 top-0 overflow-y-auto">
-            <div className="p-6 border-b border-gray-200">
-                <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-                <p className="text-sm text-gray-500">Water Maintenance</p>
-            </div>
-            
-            <nav className="p-4 space-y-2">
-                <button
-                    onClick={() => setCurrentView('dashboard')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <HomeIcon className="h-5 w-5 mr-3" />
-                    Dashboard
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('complaints')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'complaints' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <ExclamationTriangleIcon className="h-5 w-5 mr-3" />
-                    Complaints
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('work-orders')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'work-orders' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <ClipboardDocumentListIcon className="h-5 w-5 mr-3" />
-                    Work Orders
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('users')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'users' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <UserGroupIcon className="h-5 w-5 mr-3" />
-                    Users Management
-                </button>
-                
-                <button
-                    onClick={() => setCurrentView('reports')}
-                    className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
-                        currentView === 'reports' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                >
-                    <ClipboardDocumentListIcon className="h-5 w-5 mr-3" />
-                    Reports
-                </button>
-                
-                <div className="pt-4 mt-4 border-t border-gray-200">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                        <ArrowRightOnRectangleIcon className="h-5 w-5 mr-3" />
-                        Logout
-                    </button>
+        <div className="w-64 bg-[#0f172a] h-screen fixed left-0 top-0 flex flex-col overflow-y-auto z-20">
+            <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
+                <div className="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                    </svg>
                 </div>
+                <div>
+                    <p className="text-white font-semibold text-sm leading-tight">WaterLog</p>
+                    <p className="text-slate-400 text-xs">Admin Panel</p>
+                </div>
+            </div>
+            <nav className="flex-1 px-3 py-4 space-y-1">
+                {navItems.map(({ key, label, icon: Icon }) => (
+                    <button
+                        key={key}
+                        onClick={() => navigateTo(key)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium transition-all ${
+                            currentView === key
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                        }`}
+                    >
+                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        {label}
+                        {currentView === key && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                    </button>
+                ))}
             </nav>
+            <div className="px-3 py-4 border-t border-white/10 space-y-1">
+                <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white/5">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                        {auth.user.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-white text-xs font-medium truncate">{auth.user.name}</p>
+                        <p className="text-slate-500 text-xs truncate">Administrator</p>
+                    </div>
+                </div>
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-red-400 transition-all"
+                >
+                    <ArrowRightOnRectangleIcon className="h-5 w-5 flex-shrink-0" />
+                    Logout
+                </button>
+            </div>
         </div>
     );
 
-    const StatCard = ({ title, value, icon: Icon, color = 'blue' }) => (
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-            <div className="flex items-center">
-                <div className={`p-3 rounded-lg bg-${color}-100`}>
-                    <Icon className={`h-6 w-6 text-${color}-600`} />
+    const StatCard = ({ title, value, icon: Icon, accent = '#3b82f6', bg = '#eff6ff', textColor = '#1d4ed8' }) => (
+        <div className="bg-white rounded-2xl shadow-sm p-5 border border-slate-100 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+                <div>
+                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{title}</p>
+                    <p className="text-3xl font-bold" style={{ color: textColor }}>{value}</p>
                 </div>
-                <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">{title}</p>
-                    <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
+                <div className="p-2.5 rounded-xl" style={{ backgroundColor: bg }}>
+                    <Icon className="h-5 w-5" style={{ color: accent }} />
                 </div>
             </div>
         </div>
@@ -201,89 +110,77 @@ export default function AdminDashboard({ auth }) {
 
     const DashboardView = () => (
         <div className="space-y-6">
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                    <p className="text-gray-600">Welcome back, {auth.user.name}</p>
+                    <h1 className="text-2xl font-bold text-slate-800">Overview</h1>
+                    <p className="text-slate-500 text-sm mt-0.5">Welcome back, <span className="font-medium text-slate-700">{auth.user.name}</span></p>
                 </div>
-                <div className="text-sm text-gray-500">
-                    Last updated: {new Date().toLocaleDateString()}
+                <div className="flex items-center gap-3">
+                    <div className="text-right">
+                        <p className="text-xs text-slate-400">Today</p>
+                        <p className="text-sm font-medium text-slate-600">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                    </div>
+                    <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center">
+                        <BellIcon className="h-5 w-5 text-slate-500" />
+                    </div>
                 </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatCard 
-                    title="Pending Complaints" 
-                    value={dashboardData?.stats?.pending_complaints || 0}
-                    icon={ExclamationTriangleIcon}
-                    color="yellow" 
-                />
-                <StatCard 
-                    title="Pending Assignments" 
-                    value={dashboardData?.stats?.pending_assignments || 0}
-                    icon={ClockIcon}
-                    color="orange" 
-                />
-                <StatCard 
-                    title="Active Work Orders" 
-                    value={dashboardData?.stats?.active_work_orders || 0}
-                    icon={ClipboardDocumentListIcon}
-                    color="blue" 
-                />
-                <StatCard 
-                    title="Completed This Month" 
-                    value={dashboardData?.stats?.completed_this_month || 0}
-                    icon={CheckCircleIcon}
-                    color="green" 
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard title="Pending Complaints" value={dashboardData?.stats?.pending_complaints || 0} icon={ExclamationTriangleIcon} accent="#f59e0b" bg="#fffbeb" textColor="#b45309" />
+                <StatCard title="Pending Assignments" value={dashboardData?.stats?.pending_assignments || 0} icon={ClockIcon} accent="#f97316" bg="#fff7ed" textColor="#c2410c" />
+                <StatCard title="Active Work Orders" value={dashboardData?.stats?.active_work_orders || 0} icon={ClipboardDocumentListIcon} accent="#3b82f6" bg="#eff6ff" textColor="#1d4ed8" />
+                <StatCard title="Completed This Month" value={dashboardData?.stats?.completed_this_month || 0} icon={CheckCircleIcon} accent="#10b981" bg="#ecfdf5" textColor="#065f46" />
             </div>
-
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Complaints</h3>
-                    <div className="space-y-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-slate-800">Recent Complaints</h3>
+                        <button onClick={() => navigateTo('complaints')} className="text-xs text-blue-500 hover:text-blue-600 font-medium">View all →</button>
+                    </div>
+                    <div className="space-y-2">
                         {dashboardData?.recent_complaints?.slice(0, 5).map((complaint) => (
-                            <div key={complaint.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-gray-900">{complaint.user?.name}</p>
-                                    <p className="text-sm text-gray-600">{complaint.location}</p>
+                            <div key={complaint.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 text-blue-600 text-xs font-bold">
+                                        {complaint.user?.name?.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-slate-700 truncate">{complaint.user?.name}</p>
+                                        <p className="text-xs text-slate-400 truncate">{complaint.location}</p>
+                                    </div>
                                 </div>
-                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(complaint.status)}`}>
-                                    {complaint.status}
-                                </span>
+                                <span className={`px-2.5 py-1 text-xs rounded-full font-medium flex-shrink-0 ${getStatusBadge(complaint.status)}`}>{complaint.status?.replace(/_/g, ' ')}</span>
                             </div>
                         ))}
+                        {(!dashboardData?.recent_complaints || dashboardData.recent_complaints.length === 0) && (
+                            <p className="text-sm text-slate-400 text-center py-4">No recent complaints</p>
+                        )}
                     </div>
-                    <button 
-                        onClick={() => setCurrentView('complaints')}
-                        className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                        View all complaints →
-                    </button>
                 </div>
-
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Work Orders</h3>
-                    <div className="space-y-3">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-slate-800">Active Work Orders</h3>
+                        <button onClick={() => navigateTo('work-orders')} className="text-xs text-blue-500 hover:text-blue-600 font-medium">View all →</button>
+                    </div>
+                    <div className="space-y-2">
                         {dashboardData?.recent_work_orders?.slice(0, 5).map((workOrder) => (
-                            <div key={workOrder.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-gray-900">{workOrder.work_order_number}</p>
-                                    <p className="text-sm text-gray-600">{workOrder.assigned_to_user?.name || 'Unassigned'}</p>
+                            <div key={workOrder.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                        <ClipboardDocumentListIcon className="h-3.5 w-3.5 text-indigo-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-slate-700 truncate">{workOrder.work_order_number}</p>
+                                        <p className="text-xs text-slate-400 truncate">{workOrder.assigned_to_user?.name || 'Unassigned'}</p>
+                                    </div>
                                 </div>
-                                <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(workOrder.status)}`}>
-                                    {workOrder.status}
-                                </span>
+                                <span className={`px-2.5 py-1 text-xs rounded-full font-medium flex-shrink-0 ${getStatusBadge(workOrder.status)}`}>{workOrder.status?.replace(/_/g, ' ')}</span>
                             </div>
                         ))}
+                        {(!dashboardData?.recent_work_orders || dashboardData.recent_work_orders.length === 0) && (
+                            <p className="text-sm text-slate-400 text-center py-4">No active work orders</p>
+                        )}
                     </div>
-                    <button 
-                        onClick={() => setCurrentView('work-orders')}
-                        className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                    >
-                        View all work orders →
-                    </button>
                 </div>
             </div>
         </div>
@@ -291,36 +188,23 @@ export default function AdminDashboard({ auth }) {
 
     const renderCurrentView = () => {
         switch (currentView) {
-            case 'dashboard':
-                return <DashboardView />;
             case 'complaints':
-                return <ComplaintsList />;
+                return <ComplaintsList complaints={viewData?.complaints || []} maintenanceStaff={viewData?.maintenanceStaff || []} />;
             case 'work-orders':
-                return <WorkOrdersList />;
+                return <WorkOrdersList workOrders={viewData?.workOrders || []} />;
             case 'users':
-                return <UsersList />;
+                return <UsersList users={viewData?.users || []} />;
             case 'reports':
-                return <ReportsList />;
+                return <ReportsList reports={viewData?.reports || []} />;
             default:
                 return <DashboardView />;
         }
     };
 
-    if (loading) {
-        return (
-            <div className="flex">
-                <Sidebar />
-                <div className="ml-64 flex-1 flex items-center justify-center min-h-screen">
-                    <div className="text-xl text-gray-600">Loading...</div>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <>
             <Head title="Admin Dashboard" />
-            <div className="flex bg-gray-50 min-h-screen">
+            <div className="flex bg-slate-50 min-h-screen">
                 <Sidebar />
                 <div className="ml-64 flex-1 p-8">
                     {renderCurrentView()}

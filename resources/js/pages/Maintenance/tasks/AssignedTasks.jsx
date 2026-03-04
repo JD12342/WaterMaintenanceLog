@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import { ClockIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import SubmitReport from '../reports/SubmitReport';
 
@@ -16,40 +17,17 @@ const PRIORITY_BADGES = {
     urgent: 'bg-red-100 text-red-800'
 };
 
-export default function AssignedTasks() {
-    const [tasks, setTasks] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function AssignedTasks({ tasks = [] }) {
     const [reportTask, setReportTask] = useState(null);
     const [actionLoading, setActionLoading] = useState(null);
 
-    const loadTasks = async () => {
-        try {
-            const res = await window.axios.get('/api/v1/maintenance/my-tasks');
-            setTasks(res.data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadTasks();
-    }, []);
-
-    const startWork = async (taskId) => {
+    const startWork = (taskId) => {
         setActionLoading(taskId);
-        try {
-            await window.axios.post(`/api/v1/work-orders/${taskId}/start-work`);
-            loadTasks();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setActionLoading(null);
-        }
+        router.post(`/dashboard/work-orders/${taskId}/start`, {}, {
+            preserveScroll: true,
+            onFinish: () => setActionLoading(null),
+        });
     };
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading assigned tasks...</div>;
 
     return (
         <div className="space-y-6">
@@ -121,7 +99,7 @@ export default function AssignedTasks() {
                 <SubmitReport
                     workOrder={reportTask}
                     onClose={() => setReportTask(null)}
-                    onDone={() => { setReportTask(null); loadTasks(); }}
+                    onDone={() => { setReportTask(null); router.get('/dashboard', { view: 'assigned-tasks' }, { preserveScroll: true }); }}
                 />
             )}
         </div>

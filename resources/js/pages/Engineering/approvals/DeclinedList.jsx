@@ -1,31 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MagnifyingGlassIcon, EyeIcon } from '@heroicons/react/24/outline';
 
-export default function DeclinedList() {
-    const [complaints, setComplaints] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function DeclinedList({ complaints = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selected, setSelected] = useState(null);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await window.axios.get('/api/v1/engineering/declined');
-                setComplaints(res.data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
 
     const filtered = complaints.filter(c =>
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.location?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading declined complaints...</div>;
 
     return (
         <div className="space-y-6">
@@ -58,7 +41,7 @@ export default function DeclinedList() {
                                     <td className="px-6 py-4 text-sm text-gray-400 font-mono">#{c.id}</td>
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{c.title}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500">{c.location}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{c.reason || '—'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{c.damage_assessment || c.reason || '—'}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500">{new Date(c.updated_at).toLocaleDateString()}</td>
                                     <td className="px-6 py-4">
                                         <button onClick={() => setSelected(c)} className="text-blue-600 hover:text-blue-900"><EyeIcon className="h-4 w-4" /></button>
@@ -84,9 +67,9 @@ export default function DeclinedList() {
                             <div><span className="font-medium">Description:</span>
                                 <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.description}</p>
                             </div>
-                            {selected.reason && (
+                            {(selected.damage_assessment || selected.reason) && (
                                 <div><span className="font-medium">Decline Reason:</span>
-                                    <p className="text-gray-600 bg-red-50 border border-red-100 p-3 rounded-lg mt-1">{selected.reason}</p>
+                                    <p className="text-gray-600 bg-red-50 border border-red-100 p-3 rounded-lg mt-1">{selected.damage_assessment || selected.reason}</p>
                                 </div>
                             )}
                         </div>

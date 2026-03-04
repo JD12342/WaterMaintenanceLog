@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\WebDashboardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
@@ -26,8 +27,14 @@ Route::get('/', function () {
         'auth' => [
             'user' => null,
         ],
+        'flash' => [
+            'success' => session('success'),
+        ],
     ]);
 })->name('home');
+
+// Public complaint submission (no auth)
+Route::post('/complaints/public', [WebDashboardController::class, 'submitPublicComplaint'])->name('complaints.public');
 
 // Authentication routes
 Route::middleware('guest')->group(function () {
@@ -56,9 +63,10 @@ Route::middleware('guest')->group(function () {
     })->name('register');
 });
 
-// Logout route
+// Logout route — session-only, no DB queries
 Route::post('/logout', function (Request $request) {
-    Auth::logout();
+    // Skip Auth::logout() — it runs SELECT + UPDATE remember_token against remote DB
+    // Just destroying the session is sufficient to log the user out
     $request->session()->invalidate();
     $request->session()->regenerateToken();
     return redirect('/');
@@ -67,148 +75,75 @@ Route::post('/logout', function (Request $request) {
 // Authenticated routes
 Route::middleware(['auth'])->group(function () {
     
-    // Dashboard - Pass role-based data from server
-    Route::get('/dashboard', function () {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        $role = $user->role;
-        $userId = (int) Auth::id();
-        
-        // Get basic stats based on role
-        $stats = [];
-        if ($role->value === 'ADMIN') {
-            $stats = [
-                'totalUsers' => \App\Models\User::count(),
-                'totalComplaints' => \App\Models\Complaint::count(),
-                'pendingComplaints' => \App\Models\Complaint::where('status', 'pending')->count(),
-                'activeWorkOrders' => \App\Models\WorkOrder::whereNotIn('status', ['completed', 'closed'])->count(),
-            ];
-        } elseif ($role->value === 'ENGINEERING') {
-            $stats = [
-                'pendingReview' => \App\Models\Complaint::where('status', 'submitted_to_engineering')->count(),
-                'approvedThisMonth' => \App\Models\Complaint::where('status', 'approved')
-                    ->whereMonth('updated_at', now()->month)->count(),
-            ];
-        } elseif ($role->value === 'MAINTENANCE') {
-            $stats = [
-                'assignedWork' => \App\Models\WorkOrder::where('assigned_to', $userId)
-                    ->whereNotIn('status', ['completed', 'closed'])->count(),
-                'completedThisMonth' => \App\Models\WorkOrder::where('assigned_to', $userId)
-                    ->where('status', 'completed')
-                    ->whereMonth('updated_at', now()->month)->count(),
-            ];
-        } else {
-            $stats = [
-                'myComplaints' => \App\Models\Complaint::where('user_id', $userId)->count(),
-                'pendingComplaints' => \App\Models\Complaint::where('user_id', $userId)
-                    ->where('status', 'pending')->count(),
-            ];
-        }
-        
-        return Inertia::render('Dashboard', [
-            'auth' => [
-                'user' => $user
-            ],
-            'stats' => $stats,
-            'role' => $role->value
-        ]);
-    })->name('dashboard');
+    // Dashboard - Inertia-rendered with server-side data (no API calls)
+    Route::get('/dashboard', [WebDashboardController::class, 'index'])->name('dashboard');
 
-    // Complaints Management - Available to all authenticated users
+    // Dashboard actions (POST routes for mutations)
+    Route::post('/dashboard/complaints', [WebDashboardController::class, 'submitComplaint']);
+    Route::post('/dashboard/complaints/{complaint}/forward', [WebDashboardController::class, 'forwardToEngineering']);
+    Route::post('/dashboard/complaints/{complaint}/approve', [WebDashboardController::class, 'approveComplaint']);
+    Route::post('/dashboard/complaints/{complaint}/decline', [WebDashboardController::class, 'declineComplaint']);
+    Route::post('/dashboard/work-orders', [WebDashboardController::class, 'createWorkOrder']);
+    Route::post('/dashboard/work-orders/{workOrder}/start', [WebDashboardController::class, 'startWork']);
+    Route::post('/dashboard/work-orders/{workOrder}/complete', [WebDashboardController::class, 'completeWork']);
+    Route::post('/dashboard/reports', [WebDashboardController::class, 'submitReport']);
+    Route::post('/dashboard/users', [WebDashboardController::class, 'createUser']);
+    Route::put('/dashboard/users/{user}', [WebDashboardController::class, 'updateUser']);
+    Route::delete('/dashboard/users/{user}', [WebDashboardController::class, 'deleteUser']);
+
+    // Complaints Management - Redirect to dashboard view
     Route::get('/complaints', function () {
-        return Inertia::render('Complaints/ViewComplaints', [
-            'auth' => [
-                'user' => Auth::user()
-            ]
-        ]);
+        return redirect('/dashboard?view=complaints');
     })->name('complaints.index');
 
     Route::get('/complaints/submit', function () {
-        return Inertia::render('Complaints/SubmitComplaint', [
-            'auth' => [
-                'user' => Auth::user()
-            ]
-        ]);
+        return redirect('/dashboard?view=complaints');
     })->name('complaints.create');
 
-    // Work Orders Management (Admin/Engineering/Maintenance)
+    // Work Orders Management - Redirect to dashboard view
     Route::middleware(['role:ADMIN,ENGINEERING,MAINTENANCE'])->group(function () {
         Route::get('/work-orders', function () {
-            return Inertia::render('WorkOrders/ViewWorkOrders', [
-                'auth' => [
-                    'user' => Auth::user()
-                ]
-            ]);
+            return redirect('/dashboard?view=work-orders');
         })->name('work-orders.index');
 
         Route::get('/work-orders/{id}', function ($id) {
-            return Inertia::render('WorkOrders/WorkOrderDetail', [
-                'auth' => [
-                    'user' => Auth::user()
-                ],
-                'workOrderId' => $id
-            ]);
+            return redirect('/dashboard?view=work-orders');
         })->name('work-orders.show');
     });
 
-    // Maintenance Reports Management  
+    // Maintenance Reports - Redirect to dashboard view
     Route::get('/maintenance-reports', function () {
-        return Inertia::render('MaintenanceReports/ViewReports', [
-            'auth' => [
-                'user' => Auth::user()
-            ]
-        ]);
+        return redirect('/dashboard?view=reports');
     })->name('maintenance-reports.index');
 
-    // Maintenance staff only - Create report
     Route::middleware(['role:MAINTENANCE'])->group(function () {
         Route::get('/maintenance-reports/create', function () {
-            return Inertia::render('MaintenanceReports/CreateReport', [
-                'auth' => [
-                    'user' => Auth::user()
-                ]
-            ]);
+            return redirect('/dashboard?view=submit-report');
         })->name('maintenance-reports.create');
     });
 
-    // Admin only routes
+    // Admin only routes - Redirect to dashboard views
     Route::middleware(['role:ADMIN'])->group(function () {
         Route::get('/admin/users', function () {
-            return Inertia::render('Admin/ManageUsers', [
-                'auth' => [
-                    'user' => Auth::user()
-                ]
-            ]);
+            return redirect('/dashboard?view=users');
         })->name('admin.users');
 
         Route::get('/admin/settings', function () {
-            return Inertia::render('Admin/Settings', [
-                'auth' => [
-                    'user' => Auth::user()
-                ]
-            ]);
+            return redirect('/dashboard');
         })->name('admin.settings');
     });
 
-    // Engineering only routes  
+    // Engineering only routes - Redirect to dashboard views
     Route::middleware(['role:ENGINEERING'])->group(function () {
         Route::get('/engineering/review', function () {
-            return Inertia::render('Engineering/ReviewComplaints', [
-                'auth' => [
-                    'user' => Auth::user()
-                ]
-            ]);
+            return redirect('/dashboard?view=pending-approvals');
         })->name('engineering.review');
     });
 
-    // Maintenance staff routes
+    // Maintenance staff routes - Redirect to dashboard views
     Route::middleware(['role:MAINTENANCE'])->group(function () {
         Route::get('/maintenance/my-work', function () {
-            return Inertia::render('Maintenance/MyWork', [
-                'auth' => [
-                    'user' => Auth::user()
-                ]
-            ]);
+            return redirect('/dashboard?view=assigned-tasks');
         })->name('maintenance.work');
     });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { MagnifyingGlassIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 const PRIORITY_BADGES = {
@@ -8,31 +8,14 @@ const PRIORITY_BADGES = {
     urgent: 'bg-red-100 text-red-800'
 };
 
-export default function ApprovedList() {
-    const [complaints, setComplaints] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function ApprovedList({ complaints = [] }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [selected, setSelected] = useState(null);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const res = await window.axios.get('/api/v1/engineering/approved');
-                setComplaints(res.data);
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, []);
 
     const filtered = complaints.filter(c =>
         c.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         c.location?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    if (loading) return <div className="text-center py-12 text-gray-500">Loading approved complaints...</div>;
 
     return (
         <div className="space-y-6">
@@ -94,19 +77,6 @@ export default function ApprovedList() {
                             <div><span className="font-medium">Description:</span>
                                 <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.description}</p>
                             </div>
-                            {selected.engineering_assessment && (
-                                <div><span className="font-medium">Engineering Assessment:</span>
-                                    <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.engineering_assessment}</p>
-                                </div>
-                            )}
-                            {selected.recommended_materials && (
-                                <div><span className="font-medium">Recommended Materials:</span>
-                                    <p className="text-gray-600 bg-gray-50 p-3 rounded-lg mt-1">{selected.recommended_materials}</p>
-                                </div>
-                            )}
-                            {selected.estimated_hours && (
-                                <div><span className="font-medium">Estimated Hours:</span> {selected.estimated_hours}</div>
-                            )}
                         </div>
                         <div className="mt-5 flex justify-end">
                             <button onClick={() => setSelected(null)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Close</button>

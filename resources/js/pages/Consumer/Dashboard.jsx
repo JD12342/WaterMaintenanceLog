@@ -1,6 +1,7 @@
-import { Head, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Head, useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
 import ConsumerComplaintsList from './complaints/ComplaintsList';
+import SubmitComplaintModal from './complaints/SubmitComplaintModal';
 import { 
     HomeIcon,
     ExclamationTriangleIcon,
@@ -12,61 +13,14 @@ import {
     EyeIcon
 } from '@heroicons/react/24/outline';
 
-export default function ConsumerDashboard({ auth }) {
-    const [currentView, setCurrentView] = useState('dashboard');
-    const [dashboardData, setDashboardData] = useState(null);
-    const [complaints, setComplaints] = useState([]);
-    const [loading, setLoading] = useState(true);
+export default function ConsumerDashboard({ auth, dashboardData, viewData, currentView: serverView }) {
+    const currentView = serverView || 'dashboard';
     const [showComplaintForm, setShowComplaintForm] = useState(false);
     const [selectedComplaint, setSelectedComplaint] = useState(null);
 
-    const { data, setData, post, processing } = useForm({
-        title: '',
-        description: '',
-        location: '',
-        priority: 'normal'
-    });
-
-    useEffect(() => {
-        loadDashboard();
-        if (currentView === 'complaints') {
-            loadComplaints();
-        }
-    }, [currentView]);
-
-    const loadDashboard = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/dashboard');
-            setDashboardData(response.data);
-        } catch (error) {
-            console.error('Error loading dashboard:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadComplaints = async () => {
-        try {
-            const response = await window.axios.get('/api/v1/complaints');
-            setComplaints(response.data);
-        } catch (error) {
-            console.error('Error loading complaints:', error);
-        }
-    };
-
-    const handleLogout = () => {
-        post('/logout');
-    };
-
-    const submitComplaint = async () => {
-        try {
-            await post('/api/v1/complaints');
-            setShowComplaintForm(false);
-            loadComplaints();
-        } catch (error) {
-            console.error('Error submitting complaint:', error);
-        }
-    };
+    const { post } = useForm();
+    const handleLogout = () => post('/logout');
+    const navigateTo = (view) => router.get('/dashboard', { view }, { preserveScroll: true });
 
     const getStatusBadge = (status) => {
         const badges = {
@@ -92,7 +46,7 @@ export default function ConsumerDashboard({ auth }) {
             
             <nav className="p-4 space-y-2">
                 <button
-                    onClick={() => setCurrentView('dashboard')}
+                    onClick={() => navigateTo('dashboard')}
                     className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
                         currentView === 'dashboard' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -102,7 +56,7 @@ export default function ConsumerDashboard({ auth }) {
                 </button>
                 
                 <button
-                    onClick={() => setCurrentView('complaints')}
+                    onClick={() => navigateTo('complaints')}
                     className={`w-full flex items-center px-4 py-3 rounded-lg text-left transition-colors ${
                         currentView === 'complaints' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
                     }`}
@@ -193,7 +147,7 @@ export default function ConsumerDashboard({ auth }) {
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Recent Complaints</h3>
                     <button 
-                        onClick={() => setCurrentView('complaints')}
+                        onClick={() => navigateTo('complaints')}
                         className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                     >
                         View all →
@@ -229,22 +183,11 @@ export default function ConsumerDashboard({ auth }) {
             case 'dashboard':
                 return <DashboardView />;
             case 'complaints':
-                return <ConsumerComplaintsList />;
+                return <ConsumerComplaintsList complaints={viewData?.complaints || []} />;
             default:
                 return <DashboardView />;
         }
     };
-
-    if (loading) {
-        return (
-            <div className="flex">
-                <Sidebar />
-                <div className="ml-64 flex-1 flex items-center justify-center min-h-screen">
-                    <div className="text-xl text-gray-600">Loading...</div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <>
@@ -255,6 +198,13 @@ export default function ConsumerDashboard({ auth }) {
                     {renderCurrentView()}
                 </div>
             </div>
+
+            {showComplaintForm && (
+                <SubmitComplaintModal
+                    onClose={() => setShowComplaintForm(false)}
+                    onDone={() => { setShowComplaintForm(false); navigateTo('complaints'); }}
+                />
+            )}
         </>
     );
 }
