@@ -17,12 +17,17 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
         
-        $middleware->api([
+        $middleware->api(prepend: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             HandleCors::class,
         ]);
         
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'rbac' => \App\Http\Middleware\RoleBasedAccess::class,
+            'admin' => \App\Http\Middleware\AdminAccess::class,
+            'engineering' => \App\Http\Middleware\EngineeringAccess::class,
+            'maintenance' => \App\Http\Middleware\MaintenanceAccess::class,
         ]);
         
         $middleware->throttleApi('60,1');

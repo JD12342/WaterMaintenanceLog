@@ -59,8 +59,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/change-password', [\App\Http\Controllers\Api\UserController::class, 'changePassword']);
 });
 
+// Public complaint submission (legacy endpoint)
+Route::post('/complaints/public', [\App\Http\Controllers\Api\ComplaintController::class, 'storePublic']);
+
 // API v1 routes
-Route::prefix('v1')->group(function () {
+Route::prefix('v1')->group(function() {
     // Public routes
     Route::get('/status', function () {
         return response()->json([
@@ -69,6 +72,9 @@ Route::prefix('v1')->group(function () {
             'timestamp' => now()->toISOString()
         ]);
     });
+    
+    // Public complaint submission
+    Route::post('/complaints/public', [\App\Http\Controllers\Api\ComplaintController::class, 'storePublic']);
     
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -111,5 +117,11 @@ Route::prefix('v1')->group(function () {
         // Maintenance report helpers
         Route::get('maintenance-reports-stats', [\App\Http\Controllers\Api\MaintenanceReportController::class, 'getStats']);
         Route::get('completed-work-orders', [\App\Http\Controllers\Api\MaintenanceReportController::class, 'getCompletedWorkOrders']);
+
+        // STATUS MANAGEMENT SYSTEM
+        Route::get('status/info', [\App\Http\Controllers\Api\StatusController::class, 'getStatusInfo']);
+        Route::get('status/transitions', [\App\Http\Controllers\Api\StatusController::class, 'getAllowedTransitions']);
+        Route::put('complaints/{complaint}/status', [\App\Http\Controllers\Api\StatusController::class, 'updateComplaintStatus']);
+        Route::put('work-orders/{workOrder}/status', [\App\Http\Controllers\Api\StatusController::class, 'updateWorkOrderStatus']);
     });
 });

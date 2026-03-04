@@ -76,20 +76,20 @@ Route::middleware(['auth'])->group(function () {
         
         // Get basic stats based on role
         $stats = [];
-        if ($role === 'ADMIN') {
+        if ($role->value === 'ADMIN') {
             $stats = [
                 'totalUsers' => \App\Models\User::count(),
                 'totalComplaints' => \App\Models\Complaint::count(),
                 'pendingComplaints' => \App\Models\Complaint::where('status', 'pending')->count(),
                 'activeWorkOrders' => \App\Models\WorkOrder::whereNotIn('status', ['completed', 'closed'])->count(),
             ];
-        } elseif ($role === 'ENGINEERING') {
+        } elseif ($role->value === 'ENGINEERING') {
             $stats = [
                 'pendingReview' => \App\Models\Complaint::where('status', 'submitted_to_engineering')->count(),
                 'approvedThisMonth' => \App\Models\Complaint::where('status', 'approved')
                     ->whereMonth('updated_at', now()->month)->count(),
             ];
-        } elseif ($role === 'MAINTENANCE') {
+        } elseif ($role->value === 'MAINTENANCE') {
             $stats = [
                 'assignedWork' => \App\Models\WorkOrder::where('assigned_to', $userId)
                     ->whereNotIn('status', ['completed', 'closed'])->count(),
@@ -110,7 +110,7 @@ Route::middleware(['auth'])->group(function () {
                 'user' => $user
             ],
             'stats' => $stats,
-            'role' => $role
+            'role' => $role->value
         ]);
     })->name('dashboard');
 

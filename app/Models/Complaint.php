@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Complaint extends Model
@@ -41,6 +42,22 @@ class Complaint extends Model
     public function workOrder(): HasOne
     {
         return $this->hasOne(WorkOrder::class);
+    }
+
+    /**
+     * Get all engineering approvals for this complaint
+     */
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ComplaintApproval::class);
+    }
+
+    /**
+     * Get the latest engineering approval
+     */
+    public function latestApproval(): HasOne
+    {
+        return $this->hasOne(ComplaintApproval::class)->latestOfMany();
     }
 
     /**

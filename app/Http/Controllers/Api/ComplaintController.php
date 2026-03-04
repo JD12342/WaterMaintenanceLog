@@ -268,4 +268,51 @@ class ComplaintController extends Controller
 
         return response()->json(['message' => 'Complaint deleted successfully']);
     }
+
+    /**
+     * Store a complaint from public users (not authenticated)
+     */
+    public function storePublic(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|string|max:255',
+            'phone' => 'required|string|max:20',
+            'location' => 'required|string|max:500',
+            'description' => 'required|string|max:2000',
+            'priority' => 'required|in:low,normal,high,urgent',
+        ]);
+
+        // Check if user already exists, if not create a consumer account
+        $user = User::where('email', $request->email)->first();
+        
+        if (!$user) {
+            // Create a new consumer user
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'email_verified_at' => null, // They need to verify email later
+                'password' => bcrypt('temp123'), // Temporary password
+                'role' => \App\Models\UserRole::CONSUMER,
+            ]);
+        }
+
+        // Create the complaint
+        $complaint = Complaint::create([
+            'user_id' => $user->id,
+            'title' => 'Public Complaint - ' . substr($request->description, 0, 50),
+            'description' => $request->description,
+            'location' => $request->location,
+            'priority' => $request->priority,
+            'status' => 'pending',
+            'submitted_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Complaint submitted successfully',
+            'complaint_id' => $complaint->id,
+            'reference_number' => 'WC-' . date('Y') . '-' . str_pad($complaint->id, 4, '0', STR_PAD_LEFT)
+        ], 201);
+    }
 }
