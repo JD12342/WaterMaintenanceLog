@@ -65,12 +65,11 @@ Route::middleware('guest')->group(function () {
 
 // Logout route — session-only, no DB queries
 Route::post('/logout', function (Request $request) {
-    // Skip Auth::logout() — it runs SELECT + UPDATE remember_token against remote DB
-    // Just destroying the session is sufficient to log the user out
+    Auth::guard('web')->logout();
     $request->session()->invalidate();
     $request->session()->regenerateToken();
     return redirect('/');
-})->name('logout');
+})->middleware('auth')->name('logout');
 
 // Authenticated routes
 Route::middleware(['auth'])->group(function () {

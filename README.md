@@ -44,7 +44,27 @@ Browser ←→ Inertia.js ←→ Laravel (WebDashboardController) ←→ Supabas
 | Role | Email | Password |
 |------|-------|----------|
 | ADMIN | `admin@watermaintenance.local` | `Admin123!` |
+| ADMIN | `susan.davis@watermaintenance.local` | `Admin123!` |
 | ENGINEERING | `engineering@watermaintenance.local` | `Engineering123!` |
+| ENGINEERING | `jennifer.park@watermaintenance.local` | `Engineering123!` |
+| ENGINEERING | `mark.stevens@watermaintenance.local` | `Engineering123!` |
+| ENGINEERING | `rachel.kim@watermaintenance.local` | `Engineering123!` |
+| MAINTENANCE | `tom.anderson@watermaintenance.local` | `Maintenance123!` |
+| MAINTENANCE | `alex.martinez@watermaintenance.local` | `Maintenance123!` |
+| MAINTENANCE | `chris.lee@watermaintenance.local` | `Maintenance123!` |
+| MAINTENANCE | `jake.miller@watermaintenance.local` | `Maintenance123!` |
+| MAINTENANCE | `ryan.garcia@watermaintenance.local` | `Maintenance123!` |
+| MAINTENANCE | `anthon@gmail.com` | `Maintenance123!` |
+| CONSUMER | `sarah.johnson@watermaintenance.local` | `Consumer123!` |
+| CONSUMER | `mike.wilson@watermaintenance.local` | `Consumer123!` |
+| CONSUMER | `lisa.garcia@watermaintenance.local` | `Consumer123!` |
+
+### Password Pattern
+All accounts follow the pattern: **`{Role}123!`**
+- Admin accounts: `Admin123!`
+- Engineering accounts: `Engineering123!`  
+- Maintenance accounts: `Maintenance123!`
+- Consumer accounts: `Consumer123!`
 
 ---
 
