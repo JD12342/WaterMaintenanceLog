@@ -298,12 +298,18 @@ class WebDashboardController extends Controller
     /** Admin: forward complaint to engineering */
     public function forwardToEngineering(Request $request, Complaint $complaint)
     {
+        $request->validate([
+            'priority'   => 'required|in:low,normal,high,urgent',
+            'admin_notes' => 'nullable|string',
+        ]);
+
         if (!in_array($complaint->status, ['pending', 'reviewed'])) {
             throw ValidationException::withMessages(['message' => 'Complaint must be pending or reviewed.']);
         }
 
         $complaint->update([
             'status'      => 'submitted_to_engineering',
+            'priority'    => $request->priority,
             'admin_notes' => $request->input('admin_notes', $complaint->admin_notes),
         ]);
 
@@ -565,7 +571,6 @@ class WebDashboardController extends Controller
             'title'       => 'required|string|max:255',
             'description' => 'required|string',
             'location'    => 'required|string|max:255',
-            'priority'    => 'sometimes|in:low,normal,high,urgent',
         ]);
 
         Complaint::create([
@@ -573,7 +578,7 @@ class WebDashboardController extends Controller
             'title'        => $request->title,
             'description'  => $request->description,
             'location'     => $request->location,
-            'priority'     => $request->priority ?? 'normal',
+            'priority'     => 'normal',
             'status'       => 'pending',
             'submitted_at' => now(),
         ]);
@@ -590,7 +595,6 @@ class WebDashboardController extends Controller
             'phone'       => 'required|string|max:20',
             'location'    => 'required|string|max:500',
             'description' => 'required|string|max:2000',
-            'priority'    => 'required|in:low,normal,high,urgent',
         ]);
 
         // Check if user already exists, if not create a consumer account
@@ -611,7 +615,7 @@ class WebDashboardController extends Controller
             'title'        => 'Public Complaint - ' . substr($request->description, 0, 50),
             'description'  => $request->description,
             'location'     => $request->location,
-            'priority'     => $request->priority,
+            'priority'     => 'normal',
             'status'       => 'pending',
             'submitted_at' => now(),
         ]);

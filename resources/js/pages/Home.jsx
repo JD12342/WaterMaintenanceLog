@@ -13,7 +13,6 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function Home({ auth }) {
-    const [showLoginModal, setShowLoginModal] = useState(false);
     const [showComplaintForm, setShowComplaintForm] = useState(false);
 
     const ComplaintForm = () => {
@@ -22,8 +21,7 @@ export default function Home({ auth }) {
             email: '',
             phone: '',
             location: '',
-            description: '',
-            priority: 'normal'
+            description: ''
         });
         const [processing, setProcessing] = useState(false);
         const [errors, setErrors] = useState({});
@@ -31,7 +29,7 @@ export default function Home({ auth }) {
 
         const setData = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-        const reset = () => setFormData({ name: '', email: '', phone: '', location: '', description: '', priority: 'normal' });
+        const reset = () => setFormData({ name: '', email: '', phone: '', location: '', description: '' });
 
         const submit = (e) => {
             e.preventDefault();
@@ -104,21 +102,7 @@ export default function Home({ auth }) {
                                     />
                                     {errors.phone && <p className="text-red-600 text-sm mt-1">{errors.phone}</p>}
                                 </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                                    <select
-                                        value={data.priority}
-                                        onChange={e => setData('priority', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="low">Low</option>
-                                        <option value="normal">Normal</option>
-                                        <option value="high">High</option>
-                                        <option value="urgent">Urgent</option>
-                                    </select>
-                                    {errors.priority && <p className="text-red-600 text-sm mt-1">{errors.priority}</p>}
-                                </div>
+
                             </div>
                             
                             <div>
@@ -170,67 +154,6 @@ export default function Home({ auth }) {
         );
     };
 
-    const LoginModal = () => (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-lg bg-white">
-                <div className="mt-3">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900">Staff Login</h3>
-                        <button 
-                            onClick={() => setShowLoginModal(false)}
-                            className="text-gray-400 hover:text-gray-600"
-                        >
-                            <span className="text-2xl">&times;</span>
-                        </button>
-                    </div>
-                    
-                    <div className="space-y-3">
-                        <a 
-                            href="/login?role=admin"
-                            className="block w-full p-4 text-left border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
-                        >
-                            <div className="flex items-center">
-                                <UserGroupIcon className="h-5 w-5 text-red-500 mr-3" />
-                                <div>
-                                    <div className="font-medium text-gray-900 group-hover:text-blue-600">Admin Login</div>
-                                    <div className="text-sm text-gray-500">System administration</div>
-                                </div>
-                                <ChevronRightIcon className="h-4 w-4 text-gray-400 ml-auto" />
-                            </div>
-                        </a>
-
-                        <a 
-                            href="/login?role=engineering"
-                            className="block w-full p-4 text-left border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
-                        >
-                            <div className="flex items-center">
-                                <CogIcon className="h-5 w-5 text-blue-500 mr-3" />
-                                <div>
-                                    <div className="font-medium text-gray-900 group-hover:text-blue-600">Engineering Department</div>
-                                    <div className="text-sm text-gray-500">Technical review & approval</div>
-                                </div>
-                                <ChevronRightIcon className="h-4 w-4 text-gray-400 ml-auto" />
-                            </div>
-                        </a>
-
-                        <a 
-                            href="/login?role=maintenance"
-                            className="block w-full p-4 text-left border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors group"
-                        >
-                            <div className="flex items-center">
-                                <WrenchScrewdriverIcon className="h-5 w-5 text-green-500 mr-3" />
-                                <div>
-                                    <div className="font-medium text-gray-900 group-hover:text-blue-600">Maintenance Staff (Tubero)</div>
-                                    <div className="text-sm text-gray-500">Field work & repairs</div>
-                                </div>
-                                <ChevronRightIcon className="h-4 w-4 text-gray-400 ml-auto" />
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 
     // Main landing page JSX
     return (
@@ -254,12 +177,12 @@ export default function Home({ auth }) {
                                 </div>
                             </div>
                             
-                            <button
-                                onClick={() => setShowLoginModal(true)}
-                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            <a
+                                href="/login"
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-block"
                             >
                                 Staff Login
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </header>
@@ -370,12 +293,12 @@ export default function Home({ auth }) {
                                     >
                                         Submit Complaint
                                     </button>
-                                    <button 
-                                        onClick={() => setShowLoginModal(true)}
+                                    <a 
+                                        href="/login"
                                         className="block text-gray-300 hover:text-white transition-colors"
                                     >
                                         Staff Login
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -390,7 +313,6 @@ export default function Home({ auth }) {
             </div>
 
             {/* Modals */}
-            {showLoginModal && <LoginModal />}
             {showComplaintForm && <ComplaintForm />}
         </>
     );

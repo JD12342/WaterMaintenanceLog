@@ -5,7 +5,6 @@ export default function SubmitComplaintModal({ onClose, onDone }) {
     const [form, setForm] = useState({
         title: '',
         location: '',
-        priority: 'normal',
         description: ''
     });
     const [submitting, setSubmitting] = useState(false);
@@ -51,17 +50,6 @@ export default function SubmitComplaintModal({ onClose, onDone }) {
                         <input type="text" value={form.location} onChange={e => handleChange('location', e.target.value)}
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500"
                             placeholder="Street address or area description" required />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                        <select value={form.priority} onChange={e => handleChange('priority', e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500">
-                            <option value="low">Low — Minor inconvenience</option>
-                            <option value="medium">Medium — Needs attention soon</option>
-                            <option value="high">High — Significant problem</option>
-                            <option value="urgent">Urgent — Immediate action needed</option>
-                        </select>
                     </div>
 
                     <div>

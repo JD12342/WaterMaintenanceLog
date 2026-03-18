@@ -45,6 +45,7 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
     const [viewComplaint, setViewComplaint] = useState(null);
     const [reportComplaint, setReportComplaint] = useState(null);
     const [adminNotes, setAdminNotes] = useState('');
+    const [selectedPriority, setSelectedPriority] = useState('normal');
     const [sending, setSending] = useState(false);
     const [assignComplaint, setAssignComplaint] = useState(null);
     const [assignTo, setAssignTo] = useState('');
@@ -52,10 +53,15 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
     const sendToEngineering = () => {
         setSending(true);
         router.post(`/dashboard/complaints/${reportComplaint.id}/forward`, {
-            admin_notes: adminNotes
+            admin_notes: adminNotes,
+            priority: selectedPriority,
         }, {
             preserveScroll: true,
-            onSuccess: () => { setReportComplaint(null); setAdminNotes(''); },
+            onSuccess: () => {
+                setReportComplaint(null);
+                setAdminNotes('');
+                setSelectedPriority('normal');
+            },
             onFinish: () => setSending(false),
         });
     };
@@ -164,7 +170,7 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
                                                 <EyeIcon className="h-4 w-4" />
                                             </button>
                                             {complaint.status === 'pending' && (
-                                                <button onClick={() => { setReportComplaint(complaint); setAdminNotes(complaint.admin_notes || ''); }} className="p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-colors" title="Send to Engineering">
+                                                <button onClick={() => { setReportComplaint(complaint); setAdminNotes(complaint.admin_notes || ''); setSelectedPriority(complaint.priority || 'normal'); }} className="p-1.5 rounded-lg text-slate-400 hover:text-purple-600 hover:bg-purple-50 transition-colors" title="Send to Engineering">
                                                     <DocumentArrowUpIcon className="h-4 w-4" />
                                                 </button>
                                             )}
@@ -254,13 +260,27 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
                     <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
                         <div className="flex justify-between items-center mb-5">
                             <h3 className="text-lg font-bold text-slate-800">Send to Engineering</h3>
-                            <button onClick={() => setReportComplaint(null)} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                            <button onClick={() => { setReportComplaint(null); setSelectedPriority('normal'); }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
                         </div>
                         <div className="space-y-4">
                             <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
                                 <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-1">Complaint</p>
                                 <p className="text-sm font-medium text-slate-800">{reportComplaint.title}</p>
-                                <p className="text-xs text-slate-500 mt-1">{reportComplaint.location} &bull; {reportComplaint.priority} priority</p>
+                                <p className="text-xs text-slate-500 mt-1">{reportComplaint.location} &bull; {selectedPriority} priority</p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1.5">Priority Level</label>
+                                <p className="text-xs text-slate-500 mb-1.5">Set priority before sending.</p>
+                                <select
+                                    value={selectedPriority}
+                                    onChange={e => setSelectedPriority(e.target.value)}
+                                    className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-purple-500 focus:border-purple-500"
+                                >
+                                    <option value="low">Low</option>
+                                    <option value="normal">Normal</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Admin Notes / Assessment</label>
@@ -275,7 +295,7 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
                             <p className="text-xs text-slate-400">This will forward the complaint to the Engineering department for review and approval.</p>
                         </div>
                         <div className="flex justify-end gap-3 mt-6">
-                            <button onClick={() => setReportComplaint(null)} className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors">Cancel</button>
+                            <button onClick={() => { setReportComplaint(null); setSelectedPriority('normal'); }} className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors">Cancel</button>
                             <button onClick={sendToEngineering} disabled={sending} className="px-6 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium transition-colors">
                                 {sending ? 'Sending...' : 'Send to Engineering'}
                             </button>
