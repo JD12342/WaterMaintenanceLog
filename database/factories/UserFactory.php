@@ -30,11 +30,29 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
-            'role' => fake()->randomElement(UserRole::cases()),
+            'role' => UserRole::CONSUMER,
             'two_factor_secret' => null,
             'two_factor_recovery_codes' => null,
             'two_factor_confirmed_at' => null,
         ];
+    }
+
+    /**
+     * Configure the factory to handle role overrides.
+     */
+    public function configure(): static
+    {
+        return $this->afterMaking(function ($user, $attributes) {
+            // Convert string role to enum if needed
+            if (isset($attributes['role']) && is_string($attributes['role'])) {
+                $user->role = UserRole::tryFrom($attributes['role']) ?? UserRole::CONSUMER;
+            }
+        })->afterCreating(function ($user, $attributes) {
+            // Ensure role is properly set on create
+            if (isset($attributes['role']) && is_string($attributes['role'])) {
+                $user->update(['role' => UserRole::tryFrom($attributes['role']) ?? UserRole::CONSUMER]);
+            }
+        });
     }
 
     /**
