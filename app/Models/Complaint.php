@@ -39,7 +39,9 @@ class Complaint extends Model
         'status',
         'damage_assessment',
         'admin_notes',
-        'submitted_at'
+        'submitted_at',
+        'status_updated_at',
+        'status_updated_by'
     ];
 
     protected $casts = [

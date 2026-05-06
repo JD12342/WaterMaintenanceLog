@@ -43,7 +43,9 @@ class WorkOrder extends Model
         'status',
         'estimated_completion_date',
         'actual_completion_date',
-        'assignment_notes'
+        'assignment_notes',
+        'status_updated_at',
+        'status_updated_by'
     ];
 
     protected $casts = [
