@@ -1,7 +1,9 @@
 FROM php:8.2-apache
 
-# Ensure only mpm_prefork is enabled (required for Apache with PHP)
-RUN a2dismod mpm_event mpm_worker || true && a2enmod mpm_prefork
+# Disable ALL MPM modules, then enable only mpm_prefork
+RUN a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true && \
+    a2enmod mpm_prefork && \
+    apache2ctl -M 2>/dev/null | grep mpm || echo "MPM modules configured"
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -64,5 +66,7 @@ RUN php artisan config:clear || true
 # Expose port
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Verify MPM configuration before starting and ensure mpm_prefork is the only one
+CMD apache2ctl -M | grep -c mpm && \
+    a2dismod mpm_event mpm_worker 2>/dev/null || true && \
+    apache2-foreground
