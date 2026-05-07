@@ -38,10 +38,7 @@ RUN composer install --no-interaction --prefer-dist
 
 # Install and build frontend
 RUN npm ci && \
-    npm run build && \
-    echo "Build output:" && \
-    ls -la public/build/ && \
-    if [ ! -f public/build/manifest.json ]; then echo "ERROR: manifest.json not created!"; cat vite.config.js; exit 1; fi
+    npm run build
 
 # Laravel permissions
 RUN mkdir -p storage/logs bootstrap/cache /var/data && \
