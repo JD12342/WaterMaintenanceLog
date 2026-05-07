@@ -42,16 +42,10 @@ class UserFactory extends Factory
      */
     public function configure(): static
     {
-        return $this->afterMaking(function ($user, $attributes) {
-            // Convert string role to enum if needed
-            if (isset($attributes['role']) && is_string($attributes['role'])) {
-                $user->role = UserRole::tryFrom($attributes['role']) ?? UserRole::CONSUMER;
-            }
-        })->afterCreating(function ($user, $attributes) {
-            // Ensure role is properly set on create
-            if (isset($attributes['role']) && is_string($attributes['role'])) {
-                $user->update(['role' => UserRole::tryFrom($attributes['role']) ?? UserRole::CONSUMER]);
-            }
+        return $this->afterMaking(function ($user) {
+            // Role is already set during creation, no need to convert here
+        })->afterCreating(function ($user) {
+            // Role is already properly set
         });
     }
 
