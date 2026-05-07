@@ -34,9 +34,14 @@ ENV APP_URL=https://watermaintenancelog.onrender.com
 ENV APP_DEBUG=false
 
 # Install dependencies
-RUN composer install --no-interaction --prefer-dist && \
-    npm install && \
-    npm run build
+RUN composer install --no-interaction --prefer-dist
+
+# Install and build frontend
+RUN npm ci && \
+    npm run build && \
+    echo "Build output:" && \
+    ls -la public/build/ && \
+    if [ ! -f public/build/manifest.json ]; then echo "ERROR: manifest.json not created!"; cat vite.config.js; exit 1; fi
 
 # Laravel permissions
 RUN mkdir -p storage/logs bootstrap/cache /var/data && \
