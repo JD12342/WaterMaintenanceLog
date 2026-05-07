@@ -55,4 +55,4 @@ RUN php artisan config:clear || true && \
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+ENTRYPOINT ["sh", "-c", "php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
