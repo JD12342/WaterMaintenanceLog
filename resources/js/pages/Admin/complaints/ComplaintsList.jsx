@@ -46,12 +46,15 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
     const [reportComplaint, setReportComplaint] = useState(null);
     const [adminNotes, setAdminNotes] = useState('');
     const [selectedPriority, setSelectedPriority] = useState('normal');
+    const [sendError, setSendError] = useState('');
     const [sending, setSending] = useState(false);
     const [assignComplaint, setAssignComplaint] = useState(null);
     const [assignTo, setAssignTo] = useState('');
 
     const sendToEngineering = () => {
         setSending(true);
+        setSendError('');
+
         router.post(`/dashboard/complaints/${reportComplaint.id}/forward`, {
             admin_notes: adminNotes,
             priority: selectedPriority,
@@ -61,6 +64,11 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
                 setReportComplaint(null);
                 setAdminNotes('');
                 setSelectedPriority('normal');
+                setSendError('');
+            },
+            onError: (errors) => {
+                const message = errors.message || errors.priority || errors.admin_notes || 'Failed to send complaint to engineering.';
+                setSendError(Array.isArray(message) ? message.join(' ') : message);
             },
             onFinish: () => setSending(false),
         });
@@ -260,7 +268,7 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
                     <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
                         <div className="flex justify-between items-center mb-5">
                             <h3 className="text-lg font-bold text-slate-800">Send to Engineering</h3>
-                            <button onClick={() => { setReportComplaint(null); setSelectedPriority('normal'); }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+                            <button onClick={() => { setReportComplaint(null); setSelectedPriority('normal'); setSendError(''); }} className="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
                         </div>
                         <div className="space-y-4">
                             <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
@@ -293,9 +301,12 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
                                 />
                             </div>
                             <p className="text-xs text-slate-400">This will forward the complaint to the Engineering department for review and approval.</p>
+                            {sendError && (
+                                <p className="text-sm text-red-600">{sendError}</p>
+                            )}
                         </div>
                         <div className="flex justify-end gap-3 mt-6">
-                            <button onClick={() => { setReportComplaint(null); setSelectedPriority('normal'); }} className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors">Cancel</button>
+                            <button onClick={() => { setReportComplaint(null); setSelectedPriority('normal'); setSendError(''); }} className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 text-sm font-medium transition-colors">Cancel</button>
                             <button onClick={sendToEngineering} disabled={sending} className="px-6 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50 text-sm font-medium transition-colors">
                                 {sending ? 'Sending...' : 'Send to Engineering'}
                             </button>
