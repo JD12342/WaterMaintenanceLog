@@ -39,9 +39,9 @@ RUN composer install --no-interaction --prefer-dist && \
     npm run build
 
 # Laravel permissions
-RUN mkdir -p storage bootstrap/cache /var/data && \
-    chown -R www-data:www-data storage bootstrap/cache /var/data && \
-    chmod -R 775 storage bootstrap/cache /var/data
+RUN mkdir -p storage/logs bootstrap/cache /var/data && \
+    chmod -R 775 storage bootstrap/cache /var/data && \
+    chown -R www-data:www-data storage bootstrap/cache /var/data
 
 # Apache config
 RUN rm -f /etc/apache2/sites-enabled/000-default.conf
@@ -63,4 +63,4 @@ RUN echo "TRUSTED_PROXIES='*'" >> .env.production
 
 EXPOSE 80
 
-ENTRYPOINT ["sh", "-c", "php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
+ENTRYPOINT ["sh", "-c", "mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
