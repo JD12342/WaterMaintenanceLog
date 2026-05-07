@@ -1,5 +1,8 @@
 FROM php:8.2-apache
 
+# Disable conflicting Apache MPM modules
+RUN a2dismod mpm_event mpm_worker mpm_prefork || true
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     git curl zip unzip \
@@ -27,20 +30,36 @@ RUN composer install --no-interaction --prefer-dist \
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Enable Apache modules
+RUN a2enmod rewrite && a2enmod mpm_prefork
 
-# Configure Apache for Laravel
-RUN echo '<Directory /var/www/html/public>' > /etc/apache2/sites-enabled/000-default.conf && \
-    echo '  AllowOverride All' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '  Allow from all' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '</Directory>' >> /etc/apache2/sites-enabled/000-default.conf
+# Remove default config and create new one
+RUN rm -f /etc/apache2/sites-enabled/000-default.conf
 
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -i "s|/var/www/html|${APACHE_DOCUMENT_ROOT}|g" /etc/apache2/sites-enabled/000-default.conf
+# Create Laravel Apache configuration
+RUN echo '<VirtualHost *:80>' > /etc/apache2/sites-enabled/000-default.conf && \
+    echo '  ServerName _' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '  DocumentRoot /var/www/html/public' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '  <Directory /var/www/html/public>' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    Options Indexes FollowSymLinks' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    AllowOverride All' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    Require all granted' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    <IfModule mod_rewrite.c>' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '      RewriteEngine On' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '      RewriteCond %{REQUEST_FILENAME} !-d' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '      RewriteCond %{REQUEST_FILENAME} !-f' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '      RewriteRule ^ index.php [QSA,L]' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    </IfModule>' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '  </Directory>' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '</VirtualHost>' >> /etc/apache2/sites-enabled/000-default.conf
 
-# Generate app key and cache config
+# Generate app key
 RUN php artisan key:generate || true
+
+# Clear caches
+RUN php artisan config:clear || true
 
 # Expose port
 EXPOSE 80
