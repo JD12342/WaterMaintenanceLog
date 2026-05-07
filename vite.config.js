@@ -11,9 +11,16 @@ export default defineConfig({
         }),
         react(),
     ],
+    server: {
+        middlewareMode: true,
+    },
     resolve: {
         alias: {
             '@': '/resources/js',
         },
+    },
+    build: {
+        manifest: true,
+        outDir: 'public/build',
     },
 });

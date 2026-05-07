@@ -58,6 +58,9 @@ RUN echo '<VirtualHost *:80>' > /etc/apache2/sites-enabled/000-default.conf && \
 RUN php artisan config:clear || true && \
     php artisan cache:clear || true
 
+# Add trusted proxies for HTTPS behind Render
+RUN echo "TRUSTED_PROXIES='*'" >> .env.production
+
 EXPOSE 80
 
 ENTRYPOINT ["sh", "-c", "php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
