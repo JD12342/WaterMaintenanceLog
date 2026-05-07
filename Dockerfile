@@ -1,7 +1,7 @@
 FROM php:8.2-apache
 
-# Disable conflicting Apache MPM modules
-RUN a2dismod mpm_event mpm_worker mpm_prefork || true
+# Ensure only mpm_prefork is enabled (required for Apache with PHP)
+RUN a2dismod mpm_event mpm_worker || true && a2enmod mpm_prefork
 
 # Install dependencies
 RUN apt-get update && apt-get install -y \
@@ -30,8 +30,8 @@ RUN composer install --no-interaction --prefer-dist \
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Enable Apache modules
-RUN a2enmod rewrite && a2enmod mpm_prefork
+# Enable rewrite module
+RUN a2enmod rewrite
 
 # Remove default config and create new one
 RUN rm -f /etc/apache2/sites-enabled/000-default.conf
