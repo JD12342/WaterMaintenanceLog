@@ -1,72 +1,58 @@
 FROM php:8.2-apache
 
-# Disable ALL MPM modules, then enable only mpm_prefork
-RUN a2dismod mpm_event mpm_worker mpm_prefork 2>/dev/null || true && \
-    a2enmod mpm_prefork && \
-    apache2ctl -M 2>/dev/null | grep mpm || echo "MPM modules configured"
-
 # Install dependencies
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip \
+    git \
+    curl \
+    zip \
+    unzip \
     libpq-dev \
+    gnupg \
     && docker-php-ext-install pdo pdo_pgsql
+
+# FIX APACHE MPM
+RUN a2dismod mpm_event || true && \
+    a2dismod mpm_worker || true && \
+    a2enmod mpm_prefork rewrite
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# Install Node.js
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs
+
 # Set working directory
 WORKDIR /var/www/html
 
-# Copy application files
-COPY . /var/www/html
+# Copy files
+COPY . .
 
-# Install Node.js for npm
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs
+# Install dependencies
+RUN composer install --no-interaction --prefer-dist && \
+    npm install && \
+    npm run build
 
-# Install PHP and Node dependencies
-RUN composer install --no-interaction --prefer-dist \
-    && npm install \
-    && npm run build
+# Laravel permissions
+RUN mkdir -p storage bootstrap/cache && \
+    chown -R www-data:www-data storage bootstrap/cache && \
+    chmod -R 775 storage bootstrap/cache
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Enable rewrite module
-RUN a2enmod rewrite
-
-# Remove default config and create new one
+# Apache config
 RUN rm -f /etc/apache2/sites-enabled/000-default.conf
 
-# Create Laravel Apache configuration
 RUN echo '<VirtualHost *:80>' > /etc/apache2/sites-enabled/000-default.conf && \
-    echo '  ServerName _' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '  DocumentRoot /var/www/html/public' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '  <Directory /var/www/html/public>' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    Options Indexes FollowSymLinks' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    AllowOverride All' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    Require all granted' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    <IfModule mod_rewrite.c>' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '      RewriteEngine On' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '      RewriteCond %{REQUEST_FILENAME} !-d' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '      RewriteCond %{REQUEST_FILENAME} !-f' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '      RewriteRule ^ index.php [QSA,L]' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    </IfModule>' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '  </Directory>' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    DocumentRoot /var/www/html/public' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    <Directory /var/www/html/public>' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '        AllowOverride All' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '        Require all granted' >> /etc/apache2/sites-enabled/000-default.conf && \
+    echo '    </Directory>' >> /etc/apache2/sites-enabled/000-default.conf && \
     echo '</VirtualHost>' >> /etc/apache2/sites-enabled/000-default.conf
 
-# Generate app key
-RUN php artisan key:generate || true
+# Laravel cache cleanup
+RUN php artisan config:clear || true && \
+    php artisan cache:clear || true
 
-# Clear caches
-RUN php artisan config:clear || true
-
-# Expose port
 EXPOSE 80
 
-# Verify MPM configuration before starting and ensure mpm_prefork is the only one
-CMD apache2ctl -M | grep -c mpm && \
-    a2dismod mpm_event mpm_worker 2>/dev/null || true && \
-    apache2-foreground
+CMD ["apache2-foreground"]
