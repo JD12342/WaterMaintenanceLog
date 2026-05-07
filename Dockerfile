@@ -28,6 +28,11 @@ WORKDIR /var/www/html
 # Copy files
 COPY . .
 
+# Set environment for build
+ENV APP_ENV=production
+ENV APP_URL=https://watermaintenancelog.onrender.com
+ENV APP_DEBUG=false
+
 # Install dependencies
 RUN composer install --no-interaction --prefer-dist && \
     npm install && \
