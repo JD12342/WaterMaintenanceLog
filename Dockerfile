@@ -34,9 +34,9 @@ RUN composer install --no-interaction --prefer-dist && \
     npm run build
 
 # Laravel permissions
-RUN mkdir -p storage bootstrap/cache && \
-    chown -R www-data:www-data storage bootstrap/cache && \
-    chmod -R 775 storage bootstrap/cache
+RUN mkdir -p storage bootstrap/cache /var/data && \
+    chown -R www-data:www-data storage bootstrap/cache /var/data && \
+    chmod -R 775 storage bootstrap/cache /var/data
 
 # Apache config
 RUN rm -f /etc/apache2/sites-enabled/000-default.conf
