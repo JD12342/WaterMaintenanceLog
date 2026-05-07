@@ -87,6 +87,15 @@ class DashboardController extends Controller
         $month = now()->month;
         $year  = now()->year;
 
+        // Use database-aware date functions
+        $db = config('database.default');
+        $monthExpr = $db === 'sqlite' 
+            ? "CAST(strftime('%m', actual_completion_date) AS INTEGER)"
+            : "EXTRACT(MONTH FROM actual_completion_date)";
+        $yearExpr = $db === 'sqlite'
+            ? "CAST(strftime('%Y', actual_completion_date) AS INTEGER)"
+            : "EXTRACT(YEAR FROM actual_completion_date)";
+
         // Single query: all admin counts in one round-trip
         $stats = DB::selectOne("
             SELECT
@@ -94,7 +103,7 @@ class DashboardController extends Controller
                 (SELECT COUNT(*) FROM work_orders WHERE status = 'pending_assignment')                                    AS pending_assignments,
                 (SELECT COUNT(*) FROM work_orders WHERE status IN ('assigned','in_progress'))                             AS active_work_orders,
                 (SELECT COUNT(*) FROM work_orders WHERE status = 'completed'
-                    AND EXTRACT(MONTH FROM actual_completion_date) = ? AND EXTRACT(YEAR FROM actual_completion_date) = ?) AS completed_this_month,
+                    AND $monthExpr = ? AND $yearExpr = ?) AS completed_this_month,
                 (SELECT COUNT(*) FROM users)                                                                              AS total_users
         ", [$month, $year]);
 
@@ -178,19 +187,34 @@ class DashboardController extends Controller
         $month = now()->month;
         $year  = now()->year;
 
+        // Use database-aware date functions
+        $db = config('database.default');
+        $monthExpr = $db === 'sqlite' 
+            ? "CAST(strftime('%m', actual_completion_date) AS INTEGER)"
+            : "EXTRACT(MONTH FROM actual_completion_date)";
+        $yearExpr = $db === 'sqlite'
+            ? "CAST(strftime('%Y', actual_completion_date) AS INTEGER)"
+            : "EXTRACT(YEAR FROM actual_completion_date)";
+        $reportedMonthExpr = $db === 'sqlite'
+            ? "CAST(strftime('%m', reported_at) AS INTEGER)"
+            : "EXTRACT(MONTH FROM reported_at)";
+        $reportedYearExpr = $db === 'sqlite'
+            ? "CAST(strftime('%Y', reported_at) AS INTEGER)"
+            : "EXTRACT(YEAR FROM reported_at)";
+
         // Single query: all maintenance counts + hours sum in one round-trip
         $stats = DB::selectOne("
             SELECT
                 COUNT(*) FILTER (WHERE status = 'assigned')                                                         AS assigned_tasks,
                 COUNT(*) FILTER (WHERE status = 'in_progress')                                                      AS in_progress_tasks,
                 COUNT(*) FILTER (WHERE status = 'completed'
-                    AND EXTRACT(MONTH FROM actual_completion_date) = ?
-                    AND EXTRACT(YEAR  FROM actual_completion_date) = ?)                                             AS completed_this_month,
+                    AND $monthExpr = ?
+                    AND $yearExpr = ?)                                                                              AS completed_this_month,
                 COALESCE((
                     SELECT SUM(hours_worked) FROM maintenance_reports
                     WHERE reported_by = ?
-                    AND EXTRACT(MONTH FROM reported_at) = ?
-                    AND EXTRACT(YEAR  FROM reported_at) = ?
+                    AND $reportedMonthExpr = ?
+                    AND $reportedYearExpr = ?
                 ), 0)                                                                                               AS total_hours_this_month
             FROM work_orders
             WHERE assigned_to = ?
