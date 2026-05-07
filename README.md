@@ -1,8 +1,8 @@
 # Water Maintenance Log System
 
-A full-stack **Laravel 12 + React + Inertia.js** water maintenance management system with role-based access control, Supabase PostgreSQL, and session-based authentication.
+A full-stack **Laravel 12 + React + Inertia.js** water maintenance management system with role-based access control, comprehensive sample data, and session-based authentication.
 
-**System Version**: 2.0 | **Last Updated**: March 4, 2026 | **Status**: ✅ Ready for Production Use
+**System Version**: 2.2 | **Last Updated**: May 7, 2026 | **Status**: ✅ Development Ready with Sample Data
 
 ---
 
@@ -11,7 +11,7 @@ A full-stack **Laravel 12 + React + Inertia.js** water maintenance management sy
 The application uses **Inertia.js** as the bridge between the Laravel backend and React frontend. There are **no API calls from the frontend** — all data is loaded server-side via `WebDashboardController` and passed as Inertia props. Navigation between views uses `router.get()` / `router.post()` from `@inertiajs/react`.
 
 ```
-Browser ←→ Inertia.js ←→ Laravel (WebDashboardController) ←→ Supabase PostgreSQL
+Browser ←→ Inertia.js ←→ Laravel (WebDashboardController) ←→ SQLite / PostgreSQL
 ```
 
 - **Auth**: Cookie/session-based (Laravel Fortify) — no Sanctum tokens on the frontend
@@ -27,13 +27,16 @@ Browser ←→ Inertia.js ←→ Laravel (WebDashboardController) ←→ Supabas
 
 - ✅ **React Frontend** (JavaScript, no TypeScript) with Inertia.js
 - ✅ **Session-based authentication** (cookie sessions via Laravel Fortify)
-- ✅ **Role-based access control** (ADMIN, ENGINEERING, MAINTENANCE, CONSUMER)
+- ✅ **Role-based access control** (ADMIN, ENGINEERING, MAINTENANCE, CONSUMER) — one canonical admin & engineer per installation
+- ✅ **Complaint priority assignment** — admins set priority when forwarding to engineering (not user-controlled)
 - ✅ **Role-specific dashboards** with server-side data loading
 - ✅ **Public complaint submission** (no login required)
 - ✅ **Password change** functionality for all users
-- ✅ Supabase PostgreSQL database support
+- ✅ **SQLite** for local development (with sample data)
+- ✅ **PostgreSQL** support for production (Supabase compatible)
 - ✅ No public self-registration — admin creates all staff accounts
 - ✅ No frontend API calls — all data via Inertia server-side props
+- ✅ **Comprehensive sample data** — 11 user accounts, 10 complaints, 7 work orders with reports
 
 ---
 
@@ -44,20 +47,22 @@ Browser ←→ Inertia.js ←→ Laravel (WebDashboardController) ←→ Supabas
 | Role | Email | Password |
 |------|-------|----------|
 | ADMIN | `admin@watermaintenance.local` | `Admin123!` |
-| ADMIN | `susan.davis@watermaintenance.local` | `Admin123!` |
 | ENGINEERING | `engineering@watermaintenance.local` | `Engineering123!` |
-| ENGINEERING | `jennifer.park@watermaintenance.local` | `Engineering123!` |
-| ENGINEERING | `mark.stevens@watermaintenance.local` | `Engineering123!` |
-| ENGINEERING | `rachel.kim@watermaintenance.local` | `Engineering123!` |
 | MAINTENANCE | `tom.anderson@watermaintenance.local` | `Maintenance123!` |
 | MAINTENANCE | `alex.martinez@watermaintenance.local` | `Maintenance123!` |
 | MAINTENANCE | `chris.lee@watermaintenance.local` | `Maintenance123!` |
 | MAINTENANCE | `jake.miller@watermaintenance.local` | `Maintenance123!` |
 | MAINTENANCE | `ryan.garcia@watermaintenance.local` | `Maintenance123!` |
 | MAINTENANCE | `anthon@gmail.com` | `Maintenance123!` |
+
+
+
+
 | CONSUMER | `sarah.johnson@watermaintenance.local` | `Consumer123!` |
 | CONSUMER | `mike.wilson@watermaintenance.local` | `Consumer123!` |
 | CONSUMER | `lisa.garcia@watermaintenance.local` | `Consumer123!` |
+
+> **Note:** This system enforces a single canonical ADMIN and ENGINEERING account per installation. Additional staff accounts (MAINTENANCE, CONSUMER) can be created as needed via admin panel.
 
 ### Password Pattern
 All accounts follow the pattern: **`{Role}123!`**
@@ -84,14 +89,29 @@ php artisan key:generate
 
 ### 3. Database setup
 
-**Development (SQLite):**
+**Development (SQLite with Sample Data) — Recommended:**
+```bash
+php artisan migrate:fresh --seed
+```
+
+This command will:
+1. Drop all existing tables
+2. Run all database migrations
+3. Seed with canonical admin/engineering accounts
+4. Create 11 user accounts (admin, engineer, 6 maintenance staff, 3 consumers)
+5. Generate 10 sample complaints with varied statuses
+6. Generate 7 work orders with associated maintenance reports
+
+The database file will be created automatically at `database/database.sqlite`.
+
+**Development (SQLite without Sample Data):**
 ```bash
 touch database/database.sqlite
 php artisan migrate
 php artisan db:seed --class=AdminEngineeringSeeder
 ```
 
-**Production (Supabase PostgreSQL) — update `.env`:**
+**Production (PostgreSQL/Supabase) — update `.env`:**
 ```env
 DB_CONNECTION=pgsql
 DB_HOST=your-supabase-host.supabase.co
@@ -100,11 +120,13 @@ DB_DATABASE=postgres
 DB_USERNAME=postgres
 DB_PASSWORD=your-supabase-password
 DB_SSLMODE=require
+SESSION_DRIVER=file
 ```
 Then run:
 ```bash
 php artisan migrate --force
 php artisan db:seed --class=AdminEngineeringSeeder
+php artisan db:seed --class=DatabaseSeeder  # Optional: for sample data
 ```
 
 ### 4. Build frontend & start server
@@ -181,7 +203,8 @@ resources/js/pages/
 - `app/Http/Controllers/WebDashboardController.php` — Central controller for all dashboard logic
 - `app/Http/Middleware/HandleInertiaRequests.php` — Shares `auth` and `ziggy` props
 - `bootstrap/app.php` — Middleware configuration (Inertia, CSRF exceptions)
-- `database/seeders/AdminEngineeringSeeder.php` — Initial account creation
+- `database/seeders/AdminEngineeringSeeder.php` — Creates single canonical admin & engineer accounts
+- `database/seeders/DatabaseSeeder.php` — Creates 11 user accounts + 10 complaints + 7 work orders (sample data)
 - `app/Models/User.php` — User model with roles enum
 
 ---
@@ -215,6 +238,50 @@ resources/js/pages/
 - ✅ Submit complaints from the homepage
 
 > All authenticated roles can change their own password at any time.
+
+---
+
+## Complaint Workflow
+
+The complaint lifecycle flows through five main stages, with priority assignment occurring at the forwarding step:
+
+```
+1. PENDING (Initial Submission)
+   ├─ Public user or authenticated consumer submits complaint
+   ├─ Status: "pending"
+   └─ Priority: auto-set to "normal" (user cannot choose)
+
+2. SUBMITTED TO ENGINEERING (Admin Forward)
+   ├─ Admin reviews pending complaint
+   ├─ Admin selects priority level (low, normal, high, urgent) ← ADMIN SELECTS HERE
+   ├─ Admin includes optional notes
+   ├─ Status: "submitted_to_engineering"
+   └─ Assigned to: canonical ENGINEERING account
+
+3. APPROVED / DECLINED (Engineering Review)
+   ├─ Engineering team reviews complaint
+   ├─ Decision: approve (→ assigned) or decline (ends workflow)
+   └─ Status: "approved" or "declined"
+
+4. ASSIGNED (Work Order Creation)
+   ├─ Admin creates work order from approved complaint
+   ├─ Work order assigned to maintenance staff
+   ├─ Status: "assigned"
+   └─ Maintenance team receives task
+
+5. IN PROGRESS → COMPLETED (Maintenance Execution)
+   ├─ Maintenance staff starts work
+   ├─ Status: "in_progress"
+   ├─ Maintenance submits completion report
+   └─ Status: "completed"
+```
+
+**Key Points:**
+- **Priority is set by Admin**, not by the user submitting the complaint
+- Priority options: **low**, **normal**, **high**, **urgent** (defaults to normal if not specified)
+- Only **one canonical Engineering account** receives all forwarded complaints, ensuring single queue visibility
+- Once declined, complaints do not proceed to work orders
+- All complaints (pending, approved, declined) remain in the system for audit trail
 
 ---
 
@@ -370,7 +437,10 @@ npm run build
 npm run dev  # in one terminal
 php artisan serve  # in another terminal
 
-# Reset database and re-seed
+# Reset database with sample data
+php artisan migrate:fresh --seed
+
+# Reset database with canonical accounts only
 php artisan migrate:fresh
 php artisan db:seed --class=AdminEngineeringSeeder
 ```
@@ -388,6 +458,10 @@ php artisan serve
 
 **Database issues?**
 ```bash
+# Reset with sample data
+php artisan migrate:fresh --seed
+
+# Or reset with canonical accounts only
 php artisan migrate:fresh
 php artisan db:seed --class=AdminEngineeringSeeder
 ```
