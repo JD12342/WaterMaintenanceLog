@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_pgsql
 
 # FIX APACHE MPM
-RUN a2dismod mpm_event || true && \
-    a2dismod mpm_worker || true && \
+RUN a2dismod mpm_event mpm_worker || true && \
+    rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && \
     a2enmod mpm_prefork rewrite
 
 # Install Composer
@@ -65,4 +65,4 @@ RUN echo "TRUSTED_PROXIES='*'" >> .env.production
 
 EXPOSE 80
 
-ENTRYPOINT ["sh", "-c", "mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && if [ ! -f public/build/manifest.json ]; then npm run build; fi && php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
+ENTRYPOINT ["sh", "-c", "rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && if [ ! -f public/build/manifest.json ]; then npm run build; fi && php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
