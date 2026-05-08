@@ -45,16 +45,13 @@ RUN mkdir -p storage/logs bootstrap/cache /var/data && \
     chmod -R 775 storage bootstrap/cache /var/data && \
     chown -R www-data:www-data storage bootstrap/cache /var/data
 
-# Apache config
-RUN rm -f /etc/apache2/sites-enabled/000-default.conf
+# Copy and set up startup script
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
 
-RUN echo '<VirtualHost *:80>' > /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    DocumentRoot /var/www/html/public' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    <Directory /var/www/html/public>' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '        AllowOverride All' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '        Require all granted' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '    </Directory>' >> /etc/apache2/sites-enabled/000-default.conf && \
-    echo '</VirtualHost>' >> /etc/apache2/sites-enabled/000-default.conf
+# Apache config - will be dynamically configured for PORT
+RUN rm -f /etc/apache2/sites-enabled/000-default.conf && \
+    a2enmod rewrite ssl
 
 # Laravel cache cleanup
 RUN php artisan config:clear || true && \
@@ -63,9 +60,6 @@ RUN php artisan config:clear || true && \
 # Add trusted proxies for HTTPS behind Render
 RUN echo "TRUSTED_PROXIES='*'" >> .env.production
 
-EXPOSE 80
+EXPOSE 8080
 
-# Start Apache in foreground. Migrations must be run separately as a one-off
-# task (avoid running migrations in the container startup so failures won't
-# stop the web process). If the manifest is missing we'll build assets.
-ENTRYPOINT ["sh", "-c", "rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && if [ ! -f public/build/manifest.json ]; then npm run build; fi && exec apache2-foreground"]
+ENTRYPOINT ["/start.sh"]
