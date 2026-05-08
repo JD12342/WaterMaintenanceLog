@@ -65,4 +65,4 @@ RUN echo "TRUSTED_PROXIES='*'" >> .env.production
 
 EXPOSE 80
 
-ENTRYPOINT ["sh", "-c", "mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
+ENTRYPOINT ["sh", "-c", "mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && if [ ! -f public/build/manifest.json ]; then npm run build; fi && php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
