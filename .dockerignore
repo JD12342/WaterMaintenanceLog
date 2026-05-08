@@ -4,9 +4,6 @@
 .env.example
 vendor
 node_modules
-build
-public/build
-public/hot
 storage/logs
 .idea
 .DS_Store
