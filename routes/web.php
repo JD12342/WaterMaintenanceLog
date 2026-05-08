@@ -56,7 +56,7 @@ Route::middleware('guest')->group(function () {
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',
         ])->onlyInput('email');
-    });
+    })->name('login.store');
     
     Route::get('/register', function () {
         return view('auth.register');
