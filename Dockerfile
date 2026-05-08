@@ -10,10 +10,11 @@ RUN apt-get update && apt-get install -y \
     gnupg \
     && docker-php-ext-install pdo pdo_pgsql
 
-# FIX APACHE MPM
+# FIX APACHE MPM and enable required modules
 RUN a2dismod mpm_event mpm_worker || true && \
     rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && \
-    a2enmod mpm_prefork rewrite
+    a2enmod mpm_prefork rewrite ssl headers && \
+    echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -40,18 +41,23 @@ RUN composer install --no-interaction --prefer-dist
 RUN npm ci && \
     npm run build
 
-# Laravel permissions
-RUN mkdir -p storage/logs bootstrap/cache /var/data && \
-    chmod -R 775 storage bootstrap/cache /var/data && \
-    chown -R www-data:www-data storage bootstrap/cache /var/data
+# Set Apache document root to /public (CRITICAL for Laravel)
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/sites-available/*.conf && \
+    sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' \
+    /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Laravel permissions - MUST be writable
+RUN mkdir -p storage/logs bootstrap/cache && \
+    chown -R www-data:www-data /var/www/html && \
+    chmod -R 775 storage bootstrap/cache && \
+    find storage bootstrap/cache -type f -exec chmod 644 {} \; && \
+    find storage bootstrap/cache -type d -exec chmod 755 {} \;
 
 # Copy and set up startup script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
-
-# Apache config - will be dynamically configured for PORT
-RUN rm -f /etc/apache2/sites-enabled/000-default.conf && \
-    a2enmod rewrite ssl
 
 # Laravel cache cleanup
 RUN php artisan config:clear || true && \
