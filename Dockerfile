@@ -65,4 +65,7 @@ RUN echo "TRUSTED_PROXIES='*'" >> .env.production
 
 EXPOSE 80
 
-ENTRYPOINT ["sh", "-c", "rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && if [ ! -f public/build/manifest.json ]; then npm run build; fi && php artisan migrate --force 2>/dev/null || true && exec apache2-foreground"]
+# Start Apache in foreground. Migrations must be run separately as a one-off
+# task (avoid running migrations in the container startup so failures won't
+# stop the web process). If the manifest is missing we'll build assets.
+ENTRYPOINT ["sh", "-c", "rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && mkdir -p storage/logs && chmod -R 775 storage bootstrap/cache && if [ ! -f public/build/manifest.json ]; then npm run build; fi && exec apache2-foreground"]
