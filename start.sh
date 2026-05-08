@@ -8,18 +8,18 @@ echo "=========================================="
 echo "🚀 Starting Laravel Application"
 echo "=========================================="
 echo "Port: $PORT"
-echo "Environment: $(echo $APP_ENV | cut -c1-20)"
+echo "Environment: ${APP_ENV:-production}"
 echo "----------------------------------------"
-
-# Verify critical files exist
-if [ ! -f .env ]; then
-    echo "⚠️  ERROR: .env file not found!"
-    exit 1
-fi
 
 if [ ! -f public/index.php ]; then
     echo "⚠️  ERROR: public/index.php not found!"
     exit 1
+fi
+
+if [ -f .env ]; then
+    echo "Local .env file detected"
+else
+    echo "No .env file present; using Railway environment variables"
 fi
 
 # Verify storage/logs exists and is writable

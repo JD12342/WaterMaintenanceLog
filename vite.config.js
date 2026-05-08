@@ -11,9 +11,6 @@ export default defineConfig({
         }),
         react(),
     ],
-    server: {
-        middlewareMode: true,
-    },
     resolve: {
         alias: {
             '@': '/resources/js',
