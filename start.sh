@@ -57,6 +57,13 @@ if [ ! -f public/build/manifest.json ]; then
     npm run build
 fi
 
+# Run migrations and seeders
+echo "Running database migrations..."
+php artisan migrate --force
+
+echo "Seeding database with test data..."
+php artisan db:seed --force
+
 echo "----------------------------------------"
 echo "✅ Laravel ready, starting Apache..."
 echo "   Listen on: 0.0.0.0:$PORT"
