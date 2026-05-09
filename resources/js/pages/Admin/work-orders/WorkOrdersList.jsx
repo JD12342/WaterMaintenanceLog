@@ -47,7 +47,7 @@ export default function WorkOrdersList({ workOrders = [] }) {
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="min-w-max table-auto divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
                                 {['WO Number', 'Complaint', 'Assigned To', 'Status', 'Created', 'Due Date', 'Actions'].map(h => (

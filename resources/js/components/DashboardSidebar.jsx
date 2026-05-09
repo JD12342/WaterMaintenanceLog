@@ -65,7 +65,7 @@ const DashboardSidebar = ({
     const items = menuItems.length > 0 ? menuItems : getDefaultMenuItems(user?.role);
 
     return (
-        <div className="w-64 bg-white shadow-lg h-screen fixed left-0 top-0 overflow-y-auto">
+        <div className="hidden md:block md:w-64 bg-white shadow-lg md:h-screen md:fixed md:left-0 md:top-0 md:overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
                 <h1 className="text-xl font-bold text-gray-900">{title}</h1>
                 <p className="text-sm text-gray-500">{subtitle}</p>

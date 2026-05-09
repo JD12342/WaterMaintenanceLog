@@ -135,7 +135,7 @@ export default function ComplaintsList({ complaints = [], maintenanceStaff = [] 
             {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
+                    <table className="min-w-max table-auto divide-y divide-slate-200">
                         <thead className="bg-slate-50">
                             <tr>
                                 {['Complaint', 'Submitted By', 'Location', 'Priority', 'Status', 'Date', 'Actions'].map(h => (

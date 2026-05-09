@@ -2,6 +2,7 @@ import { Head, useForm, router } from '@inertiajs/react';
 import { useState } from 'react';
 import ConsumerComplaintsList from './complaints/ComplaintsList';
 import SubmitComplaintModal from './complaints/SubmitComplaintModal';
+import MobileSidebar from '@/components/MobileSidebar';
 import { 
     HomeIcon,
     ExclamationTriangleIcon,
@@ -17,6 +18,7 @@ export default function ConsumerDashboard({ auth, dashboardData, viewData, curre
     const currentView = serverView || 'dashboard';
     const [showComplaintForm, setShowComplaintForm] = useState(false);
     const [selectedComplaint, setSelectedComplaint] = useState(null);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     const { post } = useForm();
     const handleLogout = () => post('/logout');
@@ -38,7 +40,7 @@ export default function ConsumerDashboard({ auth, dashboardData, viewData, curre
     };
 
     const Sidebar = () => (
-        <div className="w-64 bg-white shadow-lg h-screen fixed left-0 top-0 overflow-y-auto">
+        <div className="hidden md:block md:w-64 md:h-screen md:fixed md:left-0 md:top-0 md:overflow-y-auto md:bg-white md:shadow-lg">
             <div className="p-6 border-b border-gray-200">
                 <h1 className="text-xl font-bold text-gray-900">Customer Portal</h1>
                 <p className="text-sm text-gray-500">Water Maintenance</p>
@@ -99,6 +101,12 @@ export default function ConsumerDashboard({ auth, dashboardData, viewData, curre
             </div>
         </div>
     );
+
+    const mobileNavItems = [
+        { key: 'dashboard', label: 'Dashboard', icon: HomeIcon },
+        { key: 'complaints', label: 'My Complaints', icon: ExclamationTriangleIcon },
+        { key: 'submit', label: 'Submit Complaint', icon: PlusIcon },
+    ];
 
     const DashboardView = () => (
         <div className="space-y-6">
@@ -178,6 +186,8 @@ export default function ConsumerDashboard({ auth, dashboardData, viewData, curre
         </div>
     );
 
+                <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={mobileNavItems} user={auth.user} onNavigate={(key) => navigateTo(key)} onLogout={handleLogout} />
+
     const renderCurrentView = () => {
         switch (currentView) {
             case 'dashboard':
@@ -192,11 +202,26 @@ export default function ConsumerDashboard({ auth, dashboardData, viewData, curre
     return (
         <>
             <Head title="Consumer Dashboard" />
-            <div className="flex bg-gray-50 min-h-screen">
+            <div className="md:overflow-x-hidden overflow-x-visible flex bg-gray-50 min-h-screen">
                 <Sidebar />
-                <div className="ml-64 flex-1 p-8">
-                    {renderCurrentView()}
+                <div className="md:ml-64 ml-0 flex-1 flex flex-col">
+                    {/* Mobile Header */}
+                    <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                        <button onClick={() => setMobileOpen(true)} className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                            <span className="text-2xl">☰</span>
+                        </button>
+                        <div className="text-center flex-1">
+                            <p className="text-sm font-semibold text-gray-800">My Account</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                            {auth.user.name?.charAt(0).toUpperCase()}
+                        </div>
+                    </div>
+                    <div className="flex-1 p-8 overflow-auto">
+                        {renderCurrentView()}
+                    </div>
                 </div>
+                <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={mobileNavItems} user={auth.user} onNavigate={(key) => navigateTo(key)} onLogout={handleLogout} />
             </div>
 
             {showComplaintForm && (

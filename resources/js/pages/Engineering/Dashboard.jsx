@@ -1,4 +1,6 @@
 import { Head, useForm, router } from '@inertiajs/react';
+import { useState } from 'react';
+import MobileSidebar from '@/components/MobileSidebar';
 import PendingApprovals from './approvals/PendingApprovals';
 import ApprovedList from './approvals/ApprovedList';
 import DeclinedList from './approvals/DeclinedList';
@@ -15,6 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function EngineeringDashboard({ auth, dashboardData, viewData, currentView }) {
+    const [mobileOpen, setMobileOpen] = useState(false);
     const { post } = useForm();
     const handleLogout = () => post('/logout');
     const navigateTo = (view) => router.get('/dashboard', { view }, { preserveScroll: true });
@@ -28,7 +31,7 @@ export default function EngineeringDashboard({ auth, dashboardData, viewData, cu
     ];
 
     const Sidebar = () => (
-        <div className="w-64 bg-[#0f172a] h-screen fixed left-0 top-0 flex flex-col overflow-y-auto z-20">
+        <div className="hidden md:flex md:w-64 md:flex-col md:h-screen md:fixed md:left-0 md:top-0 md:overflow-y-auto md:z-20 bg-[#0f172a]">
             <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
                 <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center flex-shrink-0">
                     <CogIcon className="w-5 h-5 text-white" />
@@ -174,11 +177,26 @@ export default function EngineeringDashboard({ auth, dashboardData, viewData, cu
     return (
         <>
             <Head title="Engineering Dashboard" />
-            <div className="flex bg-slate-50 min-h-screen">
+            <div className="md:overflow-x-hidden overflow-x-visible flex bg-slate-50 min-h-screen">
                 <Sidebar />
-                <div className="ml-64 flex-1 p-8">
-                    {renderCurrentView()}
+                <div className="md:ml-64 ml-0 flex-1 flex flex-col">
+                    {/* Mobile Header */}
+                    <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+                        <button onClick={() => setMobileOpen(true)} className="inline-flex items-center justify-center p-2 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100">
+                            <span className="text-2xl">☰</span>
+                        </button>
+                        <div className="text-center flex-1">
+                            <p className="text-sm font-semibold text-slate-800">Engineering</p>
+                        </div>
+                        <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+                            {auth.user.name?.charAt(0).toUpperCase()}
+                        </div>
+                    </div>
+                    <div className="flex-1 p-8 overflow-auto">
+                        {renderCurrentView()}
+                    </div>
                 </div>
+                <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} user={auth.user} onNavigate={(key) => navigateTo(key)} onLogout={handleLogout} />
             </div>
         </>
     );
